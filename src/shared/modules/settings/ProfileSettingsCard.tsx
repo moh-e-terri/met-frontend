@@ -8,18 +8,13 @@ import {
   updateOwnProfile,
   type OwnProfile,
 } from "@/core/api/profile";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 
 const fieldClass =
   "h-11 w-full rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 text-sm outline-none focus:border-[#f5a524]";
 
-function defaultAvatar(role: string | undefined) {
-  if (role === "admin") return "/images/admin/avatar-admin.svg";
-  if (role === "teacher") return "/images/teacher/avatar-teacher-default.svg";
-  return "/images/student/avatar-student-default.svg";
-}
-
 export const ProfileSettingsCard = () => {
-  const { session, refreshSession } = useAuth();
+  const { session, refreshSession, patchSession } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,8 +52,21 @@ export const ProfileSettingsCard = () => {
   }, [profile]);
 
   const applySessionFromProfile = async (next: OwnProfile) => {
-    await refreshSession();
-    // Ensure UI immediately reflects avatar even if /auth/me is slow/cached oddly.
+    // Prefer the saved profile photo immediately so dashboards/headers update now.
+    if (next.avatar || next.fullName) {
+      patchSession({
+        ...(next.avatar ? { avatar: next.avatar } : {}),
+        ...(next.fullName ? { name: next.fullName } : {}),
+        firstName: next.firstName || undefined,
+        secondName: next.secondName || undefined,
+        familyName: next.familyName || undefined,
+      });
+    }
+    try {
+      await refreshSession();
+    } catch {
+      // Keep the patched avatar if /auth/me fails transiently.
+    }
     await queryClient.invalidateQueries({
       queryKey: ["own-profile", session?.userId, session?.role],
     });
@@ -90,7 +98,8 @@ export const ProfileSettingsCard = () => {
   });
 
   const displayAvatar =
-    avatarPreview || profile?.avatar || session?.avatar || defaultAvatar(session?.role);
+    avatarPreview ||
+    resolveAccountAvatar(session, profile?.avatar);
 
   const editable = Boolean(profile?.canEdit);
   const canEditAvatar = Boolean(profile?.canEditAvatar);

@@ -134,10 +134,19 @@ async function fetchCurrentUser(token: string): Promise<AuthSession> {
     ...session,
     universityName: session.universityName || memorySession?.universityName,
     metBalance: session.metBalance ?? memorySession?.metBalance,
+    // Keep a previously known real photo if /auth/me omits profileImage.
+    avatar: session.avatar || memorySession?.avatar,
   };
 }
 
 export function getSession(): AuthSession | null {
+  return memorySession;
+}
+
+/** Merge fields into the in-memory session without hitting the network. */
+export function patchMemorySession(partial: Partial<AuthSession>): AuthSession | null {
+  if (!memorySession) return null;
+  memorySession = { ...memorySession, ...partial };
   return memorySession;
 }
 

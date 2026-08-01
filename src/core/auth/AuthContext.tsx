@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { isApiError } from "@/core/api/client";
 import {
+  patchMemorySession,
   refreshCurrentUser,
   signIn as signInService,
   signOut as signOutService,
@@ -29,6 +30,8 @@ interface AuthContextValue {
   signUp: (payload: AuthSignUpPayload) => Promise<AuthSession>;
   signOut: () => void;
   refreshSession: () => Promise<AuthSession | null>;
+  /** Merge fields into the in-memory session (e.g. after uploading a profile photo). */
+  patchSession: (partial: Partial<AuthSession>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -117,9 +120,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return nextSession;
   }, []);
 
+  const patchSession = useCallback((partial: Partial<AuthSession>) => {
+    const next = patchMemorySession(partial);
+    if (next) setSession(next);
+  }, []);
+
   const value = useMemo(
-    () => ({ session, isLoading, signIn, signUp, signOut, refreshSession }),
-    [session, isLoading, signIn, signUp, signOut, refreshSession],
+    () => ({
+      session,
+      isLoading,
+      signIn,
+      signUp,
+      signOut,
+      refreshSession,
+      patchSession,
+    }),
+    [session, isLoading, signIn, signUp, signOut, refreshSession, patchSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

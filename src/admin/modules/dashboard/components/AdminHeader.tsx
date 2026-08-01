@@ -6,7 +6,7 @@ import { cn } from "@/shared/utils/cn";
 import { useNotifications } from "@/shared/hooks/useNotifications";
 import { NotificationToast } from "@/shared/components/NotificationToast";
 import { NotificationsPanel } from "@/student/components/NotificationsPanel";
-import { ADMIN_DEFAULT_AVATAR } from "@/admin/constants/assets";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 import {
   adminHeaderHeightClass,
   ADMIN_NAVBAR_Z_INDEX,
@@ -65,7 +65,7 @@ export const AdminHeader = ({
             title="الملف الشخصي"
           >
             <img
-              src={session?.avatar || ADMIN_DEFAULT_AVATAR}
+              src={resolveAccountAvatar(session)}
               alt=""
               className="size-9 shrink-0 rounded-full object-cover sm:size-10"
               aria-hidden

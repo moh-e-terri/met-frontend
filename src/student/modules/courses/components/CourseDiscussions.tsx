@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { STUDENT_DEFAULT_AVATAR } from "@/student/constants/assets";
+import { useAuth } from "@/core/auth/AuthContext";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 import {
   communityQueryKeys,
   createCommunityPost,
@@ -14,12 +15,15 @@ interface CourseDiscussionsProps {
 }
 
 export const CourseDiscussions = ({ courseId, courseTitle }: CourseDiscussionsProps) => {
+  const { session } = useAuth();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
+  const composerAvatar = resolveAccountAvatar(session);
 
   const postsQuery = useQuery({
-    queryKey: communityQueryKeys.posts(50, 1, "anon", courseId),
-    queryFn: () => fetchCommunityPosts({ limit: 50, courseId }),
+    queryKey: communityQueryKeys.posts(50, 1, session?.userId || "anon", courseId),
+    queryFn: () =>
+      fetchCommunityPosts({ limit: 50, courseId, currentUserId: session?.userId }),
   });
 
   const createMutation = useMutation({
@@ -47,9 +51,9 @@ export const CourseDiscussions = ({ courseId, courseTitle }: CourseDiscussionsPr
 
       <div className="mb-6 flex items-start gap-3">
         <img
-          src={STUDENT_DEFAULT_AVATAR}
+          src={composerAvatar}
           alt=""
-          className="size-10 shrink-0 rounded-full"
+          className="size-10 shrink-0 rounded-full object-cover"
           aria-hidden
         />
         <div className="min-w-0 flex-1">
@@ -92,7 +96,7 @@ export const CourseDiscussions = ({ courseId, courseTitle }: CourseDiscussionsPr
                   <p className="text-[11px] text-[#94a3b8]">{post.time}</p>
                 </div>
                 <img
-                  src={post.avatar || STUDENT_DEFAULT_AVATAR}
+                  src={post.avatar || "/images/student/avatar-student-default.svg"}
                   alt=""
                   className="size-9 rounded-full object-cover"
                 />

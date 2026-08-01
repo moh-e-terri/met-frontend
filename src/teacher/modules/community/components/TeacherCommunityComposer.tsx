@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { TEACHER_DEFAULT_AVATAR } from "@/teacher/constants/assets";
+import { useAuth } from "@/core/auth/AuthContext";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 import { TeacherIcon } from "../../dashboard/components/TeacherIcon";
 
 const composerActions = [
@@ -31,7 +32,9 @@ export const TeacherCommunityComposer = ({
   isSubmitting = false,
   error,
 }: TeacherCommunityComposerProps) => {
+  const { session } = useAuth();
   const [content, setContent] = useState("");
+  const avatar = resolveAccountAvatar(session);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -50,9 +53,9 @@ export const TeacherCommunityComposer = ({
       <form onSubmit={handleSubmit}>
         <div className="flex items-start gap-4">
           <img
-            src={TEACHER_DEFAULT_AVATAR}
+            src={avatar}
             alt=""
-            className="size-11 shrink-0 rounded-full"
+            className="size-11 shrink-0 rounded-full object-cover"
             aria-hidden
           />
 
@@ -61,39 +64,35 @@ export const TeacherCommunityComposer = ({
               rows={3}
               value={content}
               onChange={(event) => setContent(event.target.value)}
-              placeholder="اكتب منشوراً أو إعلاناً للمجتمع..."
-              disabled={isSubmitting}
-              className="w-full resize-none rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-right text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#f5a524]/30 focus:bg-white disabled:opacity-60"
+              placeholder="شارك تحديثاً أو سؤالاً مع مجتمع المدرّسين..."
+              className="w-full resize-none rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#f5a524]/40 focus:bg-white"
             />
 
             {error ? (
-              <p className="mt-2 text-right text-xs text-red-600">{error}</p>
+              <p className="mt-2 text-right text-xs text-red-500">{error}</p>
             ) : null}
 
-            <div className="mt-4 flex items-center justify-between" dir="ltr">
-              <button
-                type="submit"
-                disabled={isSubmitting || !content.trim()}
-                className="rounded-2xl bg-[#f5a524] px-6 py-2.5 text-sm font-bold text-white shadow-[0px_10px_15px_-3px_rgba(245,165,36,0.2)] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? "جاري النشر..." : "نشر"}
-              </button>
-
-              <div className="flex items-center gap-2" dir="rtl">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {composerActions.map((action) => (
                   <button
                     key={action.label}
                     type="button"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-xs font-medium text-[#64748b]"
+                    className={`inline-flex items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white px-3 py-1.5 text-xs font-semibold ${action.color}`}
                   >
-                    <TeacherIcon
-                      src={action.icon}
-                      className={`size-4 ${action.color}`}
-                    />
+                    <TeacherIcon src={action.icon} className="size-3.5" />
                     <span>{action.label}</span>
                   </button>
                 ))}
               </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !content.trim()}
+                className="rounded-2xl bg-[#f5a524] px-5 py-2 text-sm font-bold text-white disabled:opacity-60"
+              >
+                {isSubmitting ? "جاري النشر..." : "نشر"}
+              </button>
             </div>
           </div>
         </div>

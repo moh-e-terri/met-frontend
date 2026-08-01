@@ -3,7 +3,7 @@ import { useAuth } from "@/core/auth/AuthContext";
 import { DashboardHeader } from "@/shared/components/DashboardHeader";
 import { DashboardIcon } from "@/shared/components/DashboardIcon";
 import { useNotifications } from "@/shared/hooks/useNotifications";
-import { STUDENT_DEFAULT_AVATAR } from "@/student/constants/assets";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 import {
   studentHeaderHeightClass,
   STUDENT_NAVBAR_Z_INDEX,
@@ -79,7 +79,7 @@ export const StudentHeader = ({
 
   return (
     <DashboardHeader
-      avatar={session?.avatar || STUDENT_DEFAULT_AVATAR}
+      avatar={resolveAccountAvatar(session)}
       displayName={displayName}
       roleSubtitle="طالب"
       sidebarId="student-sidebar"

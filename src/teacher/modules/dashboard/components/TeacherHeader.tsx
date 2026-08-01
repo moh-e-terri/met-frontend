@@ -1,14 +1,14 @@
-import { useLocation } from "react-router-dom";
 import { useAuth } from "@/core/auth/AuthContext";
 import { getTeacherBasePath } from "@/core/routing/appSurface";
 import { DashboardHeader } from "@/shared/components/DashboardHeader";
 import { DashboardIcon } from "@/shared/components/DashboardIcon";
 import { useNotifications } from "@/shared/hooks/useNotifications";
-import { TEACHER_DEFAULT_AVATAR } from "@/teacher/constants/assets";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 import {
   teacherHeaderHeightClass,
   TEACHER_NAVBAR_Z_INDEX,
 } from "@/teacher/constants/layout";
+import { useLocation } from "react-router-dom";
 
 interface TeacherHeaderProps {
   sidebarOpen: boolean;
@@ -69,7 +69,7 @@ export const TeacherHeader = ({
 
   return (
     <DashboardHeader
-      avatar={session?.avatar || TEACHER_DEFAULT_AVATAR}
+      avatar={resolveAccountAvatar(session)}
       displayName={displayName}
       roleSubtitle="مدرّس معتمد"
       sidebarId="teacher-sidebar"

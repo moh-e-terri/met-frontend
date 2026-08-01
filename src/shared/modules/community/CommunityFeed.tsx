@@ -9,6 +9,7 @@ import {
   type CommunityPostView,
 } from "@/core/api/community";
 import { rememberPostCommunityScope } from "@/core/api/notifications";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 import { CommunityComposer } from "./CommunityComposer";
 import { CommunityPostCard } from "./CommunityPostCard";
 
@@ -108,13 +109,7 @@ export const CommunityFeed = ({
   return (
     <div className="space-y-6">
       <CommunityComposer
-        avatar={
-          session?.role === "admin"
-            ? "/images/admin/avatar-admin.svg"
-            : session?.role === "teacher"
-              ? "/images/teacher/avatar-teacher-default.svg"
-              : "/images/student/avatar-student-default.svg"
-        }
+        avatar={resolveAccountAvatar(session)}
         placeholder={
           composerPlaceholder ||
           (courseTitle

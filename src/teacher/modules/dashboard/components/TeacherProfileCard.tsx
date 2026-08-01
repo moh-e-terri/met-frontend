@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/core/auth/AuthContext";
 import { getTeacherBasePath } from "@/core/routing/appSurface";
-import { TEACHER_DEFAULT_AVATAR } from "@/teacher/constants/assets";
+import { resolveAccountAvatar } from "@/shared/utils/accountAvatar";
 import type { TeacherProfile } from "@/teacher/api";
 import { TeacherIcon } from "./TeacherIcon";
 
@@ -13,7 +13,9 @@ interface TeacherProfileCardProps {
 export const TeacherProfileCard = ({ profile, isLoading }: TeacherProfileCardProps) => {
   const { session } = useAuth();
   const displayName = session?.name ?? "المحاضر";
-  const uploadPath = `${getTeacherBasePath()}/courses/new`;
+  const basePath = getTeacherBasePath();
+  const uploadPath = `${basePath}/courses/new`;
+  const avatar = resolveAccountAvatar(session);
 
   const metaItems = [
     profile?.title
@@ -41,9 +43,9 @@ export const TeacherProfileCard = ({ profile, isLoading }: TeacherProfileCardPro
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
         <img
-          src={TEACHER_DEFAULT_AVATAR}
+          src={avatar}
           alt=""
-          className="size-24 shrink-0 self-end rounded-full sm:size-28 lg:self-auto xl:size-32"
+          className="size-24 shrink-0 self-end rounded-full object-cover sm:size-28 lg:self-auto xl:size-32"
           aria-hidden
         />
 
@@ -78,12 +80,12 @@ export const TeacherProfileCard = ({ profile, isLoading }: TeacherProfileCardPro
             />
             <span>رفع محتوى جديد</span>
           </Link>
-          <button
-            type="button"
+          <Link
+            to={`${basePath}/settings`}
             className="inline-flex items-center justify-center rounded-2xl border border-[#e2e8f0] bg-white px-5 py-3 text-sm font-semibold text-[#475569] transition-colors hover:bg-[#f8fafc]"
           >
             تعديل الملف
-          </button>
+          </Link>
         </div>
       </div>
     </section>
