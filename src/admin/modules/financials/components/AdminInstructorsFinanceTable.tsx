@@ -78,7 +78,10 @@ export const AdminInstructorsFinanceTable = ({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
-  const focusedRowRef = useRef<HTMLTableRowElement | HTMLElement | null>(null);
+  const focusedRowRef = useRef<HTMLElement | null>(null);
+  const setFocusedRowRef = (node: HTMLElement | null) => {
+    focusedRowRef.current = node;
+  };
   const appliedFocusKeyRef = useRef<string | null>(null);
 
   const focusKey = [
@@ -217,7 +220,7 @@ export const AdminInstructorsFinanceTable = ({
                     return (
                       <Fragment key={row.instructorId}>
                         <tr
-                          ref={highlighted ? focusedRowRef : undefined}
+                          ref={highlighted ? setFocusedRowRef : undefined}
                           className={cn(
                             "border-b border-[#f1f5f9] text-sm last:border-0",
                             highlighted ? "bg-[#fff7ed]/80" : "",
@@ -287,7 +290,7 @@ export const AdminInstructorsFinanceTable = ({
                 return (
                   <article
                     key={row.instructorId}
-                    ref={highlighted ? focusedRowRef : undefined}
+                    ref={highlighted ? setFocusedRowRef : undefined}
                     className={cn(
                       "rounded-2xl border p-4",
                       highlighted
