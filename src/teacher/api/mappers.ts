@@ -8,6 +8,7 @@ import {
   pickNestedUser,
   pickNumber,
   pickString,
+  resolveMediaUrl,
 } from "@/core/api/utils";
 import type {
   CourseStudent,
@@ -499,8 +500,17 @@ export function mapCourseStudents(raw: unknown): CourseStudent[] {
         familyName:
           pickString(user.familyName, user.lastName, studentRef.familyName) || undefined,
         avatar:
-          pickString(user.avatar, user.image, user.photo, studentRef.avatar, studentRef.image) ||
-          TEACHER_DEFAULT_AVATAR,
+          resolveMediaUrl(
+            pickString(
+              user.profileImage,
+              user.avatar,
+              user.image,
+              user.photo,
+              studentRef.profileImage,
+              studentRef.avatar,
+              studentRef.image,
+            ),
+          ) || TEACHER_DEFAULT_AVATAR,
         email: pickString(user.email, studentRef.email) || undefined,
         progress: pickNumber(
           item.progress,

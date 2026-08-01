@@ -29,7 +29,10 @@ export interface AdminCatalogCourse {
   status: AdminCourseStatus;
   level?: "beginner" | "intermediate" | "advanced";
   metCost?: number;
+  /** Instructor profile document id (for assign/edit APIs) */
   instructorId?: string;
+  /** Auth user id for chat / messaging */
+  lecturerUserId?: string;
   universityIds?: string[];
   enrolledCount?: number;
   isPublished?: boolean;

@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   adminQueryKeys,
-  fetchAdminCourses,
+  fetchAdminCourseById,
 } from "@/admin/api";
 import {
   courseLevelLabels,
@@ -17,14 +17,15 @@ import {
 export const AdminCourseDetailsPage = () => {
   const { courseId = "" } = useParams<{ courseId: string }>();
 
-  const coursesQuery = useQuery({
-    queryKey: adminQueryKeys.courses({ limit: 100 }),
-    queryFn: () => fetchAdminCourses({ page: 1, limit: 100 }),
+  const courseQuery = useQuery({
+    queryKey: [...adminQueryKeys.courses({}), "detail", courseId],
+    queryFn: () => fetchAdminCourseById(courseId),
+    enabled: Boolean(courseId),
   });
 
-  const course = coursesQuery.data?.items.find((item) => item.id === courseId);
+  const course = courseQuery.data;
 
-  if (coursesQuery.isLoading) {
+  if (courseQuery.isLoading) {
     return (
       <div className="mx-auto w-full max-w-[1280px] space-y-6">
         <div className="h-40 animate-pulse rounded-3xl bg-[#e2e8f0]" />
@@ -58,7 +59,7 @@ export const AdminCourseDetailsPage = () => {
     enrolledCount: course.enrolledCount,
     lecturerName: course.lecturer,
     lecturerAvatar: course.lecturerAvatar,
-    lecturerId: course.instructorId,
+    lecturerId: course.lecturerUserId || course.instructorId,
   };
 
   return (

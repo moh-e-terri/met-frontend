@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { useAuth } from "@/core/auth/AuthContext";
 import { StudentIcon } from "../../dashboard/components/StudentIcon";
 import type { ChatThread } from "@/core/api/chat";
 
@@ -6,22 +8,58 @@ interface ChatContactProfileProps {
 }
 
 export const ChatContactProfile = ({ thread }: ChatContactProfileProps) => {
+  const { session } = useAuth();
+  const profilePath =
+    session?.role === "teacher" && thread.participantId
+      ? `/teacher/students/${thread.participantId}`
+      : session?.role === "admin" && thread.participantId
+        ? `/admin/students/${thread.participantId}`
+        : null;
+
   return (
     <aside
       className="hidden h-full min-h-0 flex-col overflow-y-auto overscroll-contain p-5 xl:flex"
       dir="rtl"
     >
       <div className="text-center">
-        <img
-          src={thread.avatar}
-          alt=""
-          className="mx-auto size-24 rounded-full"
-          aria-hidden
-        />
-        <h2 className="mt-4 text-lg font-bold text-[#0f172a]">{thread.name}</h2>
+        {profilePath ? (
+          <Link to={profilePath} className="inline-block">
+            <img
+              src={thread.avatar}
+              alt=""
+              className="mx-auto size-24 rounded-full transition-opacity hover:opacity-90"
+              aria-hidden
+            />
+          </Link>
+        ) : (
+          <img
+            src={thread.avatar}
+            alt=""
+            className="mx-auto size-24 rounded-full"
+            aria-hidden
+          />
+        )}
+        {profilePath ? (
+          <Link
+            to={profilePath}
+            className="mt-4 inline-block text-lg font-bold text-[#0f172a] transition-colors hover:text-[#f5a524]"
+          >
+            {thread.name}
+          </Link>
+        ) : (
+          <h2 className="mt-4 text-lg font-bold text-[#0f172a]">{thread.name}</h2>
+        )}
         {thread.role && (
           <p className="mt-1 text-sm text-[#64748b]">{thread.role}</p>
         )}
+        {profilePath ? (
+          <Link
+            to={profilePath}
+            className="mt-3 inline-flex text-xs font-semibold text-[#f5a524] hover:text-[#d97706]"
+          >
+            عرض الملف الأساسي
+          </Link>
+        ) : null}
       </div>
 
       {thread.university && thread.major && (

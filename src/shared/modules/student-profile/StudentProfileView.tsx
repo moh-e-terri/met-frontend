@@ -10,6 +10,8 @@ interface StudentProfileViewProps {
   backLabel: string;
   chatsPath: string;
   viewerRole: StudentProfileViewerRole;
+  /** `basic` hides system ids / MET ledger (teacher view). */
+  detailLevel?: "full" | "basic";
   courseLinkFor?: (courseId: string) => string | null;
   headerActions?: ReactNode;
   footerSlot?: ReactNode;
@@ -27,10 +29,13 @@ export const StudentProfileView = ({
   backTo,
   backLabel,
   chatsPath,
+  detailLevel = "full",
   courseLinkFor,
   headerActions,
   footerSlot,
 }: StudentProfileViewProps) => {
+  const isBasic = detailLevel === "basic";
+
   return (
     <PageMotion className="mx-auto w-full max-w-[960px] space-y-6" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -40,7 +45,9 @@ export const StudentProfileView = ({
           </Link>
           <h1 className="mt-2 text-2xl font-black text-[#0f172a]">ملف الطالب</h1>
           <p className="mt-1 text-sm text-[#64748b]">
-            بيانات الحساب واشتراكات الدورات وكل التفاصيل المرتبطة
+            {isBasic
+              ? "عرض البيانات الأساسية للطالب ضمن مقرراتك"
+              : "بيانات الحساب واشتراكات الدورات وكل التفاصيل المرتبطة"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -76,14 +83,16 @@ export const StudentProfileView = ({
               <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs font-semibold text-[#f5a524]">
                 {profile.coursesCount} دورة مشتركة
               </span>
-              {profile.metPoints != null ? (
+              {!isBasic && profile.metPoints != null ? (
                 <span className="rounded-full bg-[#ecfdf5] px-3 py-1 text-xs font-semibold text-[#14b8a6]">
                   {profile.metPoints} MET
                 </span>
               ) : null}
-              <span className="rounded-full bg-[#f1f5f9] px-3 py-1 text-xs font-semibold text-[#64748b]">
-                {profile.isActive === false ? "غير نشط" : "نشط"}
-              </span>
+              {!isBasic ? (
+                <span className="rounded-full bg-[#f1f5f9] px-3 py-1 text-xs font-semibold text-[#64748b]">
+                  {profile.isActive === false ? "غير نشط" : "نشط"}
+                </span>
+              ) : null}
               {profile.isRecognized ? (
                 <span className="rounded-full bg-[#ecfdf5] px-3 py-1 text-xs font-semibold text-[#14b8a6]">
                   معروف مسبقاً
@@ -94,8 +103,8 @@ export const StudentProfileView = ({
         </div>
       </section>
 
-      <section className="grid gap-6 sm:grid-cols-2">
-        <div className="rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm">
+      <section className={isBasic ? "rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm" : "grid gap-6 sm:grid-cols-2"}>
+        <div className={isBasic ? "" : "rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm"}>
           <h3 className="mb-4 text-base font-bold text-[#0f172a]">بيانات الحساب</h3>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between gap-3">
@@ -120,57 +129,63 @@ export const StudentProfileView = ({
               <dt className="text-[#64748b]">الجامعة</dt>
               <dd className="font-semibold text-[#0f172a]">{profile.universityName || "—"}</dd>
             </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-[#64748b]">تاريخ الإنشاء</dt>
-              <dd className="font-semibold text-[#0f172a]">{formatDate(profile.createdAt)}</dd>
-            </div>
+            {!isBasic ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#64748b]">تاريخ الإنشاء</dt>
+                <dd className="font-semibold text-[#0f172a]">{formatDate(profile.createdAt)}</dd>
+              </div>
+            ) : null}
           </dl>
         </div>
 
-        <div className="rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-base font-bold text-[#0f172a]">معرّفات النظام</h3>
-          <dl className="space-y-3 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-[#64748b]">معرّف المستخدم</dt>
-              <dd className="break-all font-mono text-xs text-[#0f172a]" dir="ltr">
-                {profile.userId}
-              </dd>
-            </div>
-            {profile.profileId ? (
+        {!isBasic ? (
+          <div className="rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-base font-bold text-[#0f172a]">معرّفات النظام</h3>
+            <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-3">
-                <dt className="text-[#64748b]">معرّف ملف الطالب</dt>
+                <dt className="text-[#64748b]">معرّف المستخدم</dt>
                 <dd className="break-all font-mono text-xs text-[#0f172a]" dir="ltr">
-                  {profile.profileId}
+                  {profile.userId}
                 </dd>
               </div>
-            ) : null}
-            <div className="flex justify-between gap-3">
-              <dt className="text-[#64748b]">عدد الدورات</dt>
-              <dd className="font-semibold text-[#0f172a]" dir="ltr">
-                {profile.coursesCount}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-[#64748b]">رصيد MET</dt>
-              <dd className="font-semibold text-[#0f172a]" dir="ltr">
-                {profile.metPoints != null ? `${profile.metPoints} MET` : "—"}
-              </dd>
-            </div>
-          </dl>
-        </div>
+              {profile.profileId ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[#64748b]">معرّف ملف الطالب</dt>
+                  <dd className="break-all font-mono text-xs text-[#0f172a]" dir="ltr">
+                    {profile.profileId}
+                  </dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#64748b]">عدد الدورات</dt>
+                <dd className="font-semibold text-[#0f172a]" dir="ltr">
+                  {profile.coursesCount}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#64748b]">رصيد MET</dt>
+                <dd className="font-semibold text-[#0f172a]" dir="ltr">
+                  {profile.metPoints != null ? `${profile.metPoints} MET` : "—"}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-base font-bold text-[#0f172a]">اشتراكات الدورات</h3>
+          <h3 className="text-base font-bold text-[#0f172a]">
+            {isBasic ? "المقررات المشتركة معك" : "اشتراكات الدورات"}
+          </h3>
           <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs font-semibold text-[#f5a524]">
-            {profile.enrollments.length} اشتراك
+            {profile.enrollments.length} {isBasic ? "مقرر" : "اشتراك"}
           </span>
         </div>
 
         {profile.enrollments.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-4 py-8 text-center text-sm text-[#94a3b8]">
-            لا توجد اشتراكات ظاهرة حالياً لهذا الطالب.
+            لا توجد مقررات مشتركة ظاهرة حالياً لهذا الطالب.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -182,9 +197,9 @@ export const StudentProfileView = ({
                     <div className="min-w-0 text-right">
                       <p className="font-bold text-[#0f172a]">{course.title}</p>
                       <p className="mt-1 text-xs text-[#64748b]">
-                        {course.instructorName ? `${course.instructorName} · ` : ""}
+                        {course.instructorName && !isBasic ? `${course.instructorName} · ` : ""}
                         انضم: {formatDate(course.enrolledAt)}
-                        {course.metCost != null ? ` · ${course.metCost} MET` : ""}
+                        {!isBasic && course.metCost != null ? ` · ${course.metCost} MET` : ""}
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full bg-[#eff6ff] px-2.5 py-1 text-xs font-bold text-[#3b82f6]" dir="ltr">
@@ -220,7 +235,7 @@ export const StudentProfileView = ({
         )}
       </section>
 
-      {profile.metTransactions.length > 0 ? (
+      {!isBasic && profile.metTransactions.length > 0 ? (
         <section className="rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm">
           <h3 className="mb-4 text-base font-bold text-[#0f172a]">سجل نقاط MET</h3>
           <ul className="space-y-2">

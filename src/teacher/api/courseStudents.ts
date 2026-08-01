@@ -1,12 +1,29 @@
-import { apiClient, type ApiEnvelope } from "@/core/api/client";
-import { mapCourseStudents } from "./mappers";
+import {
+  fetchInstructorCourseStudents,
+  type CourseEnrollee,
+} from "@/core/api/courseEnrollees";
 import type { CourseStudent } from "./types";
 
+function toCourseStudent(enrollee: CourseEnrollee): CourseStudent {
+  return {
+    id: enrollee.id,
+    profileId: enrollee.profileId,
+    name: enrollee.name,
+    firstName: enrollee.firstName,
+    secondName: enrollee.secondName,
+    familyName: enrollee.familyName,
+    avatar: enrollee.avatar,
+    email: enrollee.email,
+    progress: enrollee.progress,
+    isRecognized: false,
+    university: enrollee.university,
+    enrolledAt: enrollee.enrolledAt,
+  };
+}
+
 export async function fetchCourseStudents(courseId: string): Promise<CourseStudent[]> {
-  const response = await apiClient.get<ApiEnvelope<unknown>>(
-    `/instructor/courses/${courseId}/students`,
-  );
-  return mapCourseStudents(response.data.data);
+  const enrollees = await fetchInstructorCourseStudents(courseId);
+  return enrollees.map(toCourseStudent);
 }
 
 export const courseStudentsQueryKeys = {

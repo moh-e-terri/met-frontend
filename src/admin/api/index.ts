@@ -3,7 +3,7 @@ export { fetchAdminUniversities, createAdminUniversity } from "./adminUniversiti
 export type { CreateUniversityPayload } from "./adminUniversities";
 export { fetchAdminInstructors, fetchAdminInstructorById, createAdminInstructor, updateAdminInstructor } from "./adminInstructors";
 export type { CreateInstructorPayload, UpdateAdminInstructorPayload } from "./adminInstructors";
-export { fetchAdminCourses, createAdminCourse, updateAdminCourse, deleteAdminCourse } from "./adminCourses";
+export { fetchAdminCourses, fetchAdminCourseById, createAdminCourse, updateAdminCourse, deleteAdminCourse } from "./adminCourses";
 export type { CreateAdminCoursePayload, UpdateAdminCoursePayload } from "./adminCourses";
 export {
   fetchAdminStudents,

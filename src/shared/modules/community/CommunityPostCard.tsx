@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   deleteCommunityPost,
@@ -18,6 +19,8 @@ interface CommunityPostCardProps {
   highlighted?: boolean;
   /** Open comments section automatically (e.g. post_reply notification) */
   autoOpenComments?: boolean;
+  /** When set, author avatar/name link to this profile base path */
+  authorProfileBasePath?: string;
 }
 
 function MaskIcon({ src, className }: { src: string; className?: string }) {
@@ -43,6 +46,7 @@ export const CommunityPostCard = ({
   canModerate = false,
   highlighted = false,
   autoOpenComments = false,
+  authorProfileBasePath,
 }: CommunityPostCardProps) => {
   const queryClient = useQueryClient();
   const articleRef = useRef<HTMLElement>(null);
@@ -76,6 +80,10 @@ export const CommunityPostCard = ({
   const isAdmin = currentUserRole === "admin" || canModerate;
   const canDelete = isAuthor || isAdmin;
   const canPin = isAdmin;
+  const authorProfilePath =
+    authorProfileBasePath && post.authorId && !isAuthor
+      ? `${authorProfileBasePath}/${post.authorId}`
+      : null;
 
   const invalidatePosts = async () => {
     await queryClient.invalidateQueries({ queryKey: ["community", "posts"] });
@@ -130,15 +138,35 @@ export const CommunityPostCard = ({
     >
       <header className="mb-3 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <img
-            src={post.avatar}
-            alt=""
-            className="size-11 shrink-0 rounded-full object-cover"
-            aria-hidden
-          />
+          {authorProfilePath ? (
+            <Link to={authorProfilePath} className="shrink-0">
+              <img
+                src={post.avatar}
+                alt=""
+                className="size-11 rounded-full object-cover transition-opacity hover:opacity-90"
+                aria-hidden
+              />
+            </Link>
+          ) : (
+            <img
+              src={post.avatar}
+              alt=""
+              className="size-11 shrink-0 rounded-full object-cover"
+              aria-hidden
+            />
+          )}
           <div className="min-w-0 text-right">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-bold text-[#0f172a]">{post.author}</p>
+              {authorProfilePath ? (
+                <Link
+                  to={authorProfilePath}
+                  className="font-bold text-[#0f172a] transition-colors hover:text-[#f5a524]"
+                >
+                  {post.author}
+                </Link>
+              ) : (
+                <p className="font-bold text-[#0f172a]">{post.author}</p>
+              )}
               {pinned ? (
                 <span className="rounded-full bg-[#fff7ed] px-2 py-0.5 text-[11px] font-semibold text-[#f5a524]">
                   مثبت

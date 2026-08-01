@@ -3,6 +3,7 @@ import {
   asArray,
   asRecord,
   extractApiList,
+  pickAuthUserId,
   pickId,
   pickNestedUser,
   pickNumber,
@@ -188,7 +189,7 @@ export function mapAdminCatalogCourses(raw: unknown): AdminCatalogCourse[] {
     data.courses ?? data.items ?? data.data ?? (Array.isArray(raw) ? raw : []),
   );
 
-  return items.flatMap((item, index) => {
+  return items.flatMap((item) => {
       const id = pickId(item);
       const title = pickString(item.title, item.name);
       if (!id || !title) return [];
@@ -228,20 +229,28 @@ export function mapAdminCatalogCourses(raw: unknown): AdminCatalogCourse[] {
             ? rawThumbnail
             : resolveMediaUrl(rawThumbnail) || "/images/programming.jpg";
       const rawAvatar = pickString(
+        instructor.profileImage,
         instructor.avatar,
         instructor.image,
         instructor.photo,
+        asRecord(instructorRaw.userId).profileImage,
+        asRecord(instructorRaw.user).profileImage,
       );
+      const resolvedAvatar = rawAvatar
+        ? rawAvatar.startsWith("/images/")
+          ? rawAvatar
+          : resolveMediaUrl(rawAvatar)
+        : undefined;
       const lecturerAvatar =
-        (rawAvatar
-          ? rawAvatar.startsWith("/images/")
-            ? rawAvatar
-            : resolveMediaUrl(rawAvatar)
-          : "") ||
-        COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length];
-      const instructorId =
-        pickId(instructor) ||
+        resolvedAvatar || "/images/teacher/avatar-teacher-default.svg";
+      const instructorProfileId =
+        pickId(instructorRaw) ||
         (typeof item.instructorId === "string" ? item.instructorId : "");
+      const instructorUserId =
+        pickAuthUserId(instructorRaw, instructor) ||
+        pickId(asRecord(instructorRaw.userId)) ||
+        pickId(asRecord(instructor.userId));
+      const instructorId = instructorProfileId || instructorUserId;
 
       const course: AdminCatalogCourse = {
         id,
@@ -272,6 +281,7 @@ export function mapAdminCatalogCourses(raw: unknown): AdminCatalogCourse[] {
       const description = pickString(item.description);
       if (description) course.description = description;
       if (instructorId) course.instructorId = instructorId;
+      if (instructorUserId) course.lecturerUserId = instructorUserId;
 
       return [course];
     });
@@ -295,7 +305,7 @@ function formatMetAmount(value: number): string {
 
 function mapAdminInstructorItem(
   item: Record<string, unknown>,
-  index: number,
+  _index: number,
 ): AdminLecturer | null {
   const source = flattenPersonRecord(item);
   const id = pickId(source);
@@ -372,7 +382,7 @@ function mapAdminInstructorItem(
     avatar:
       resolveMediaUrl(
         pickString(source.profileImage, source.avatar, source.image, source.photo),
-      ) || COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length],
+      ) || "/images/teacher/avatar-teacher-default.svg",
     title: pickString(source.title, source.specialization) || "مدرّس",
     joinedDate: formatJoinedDate(
       pickString(source.createdAt, source.joinedAt, source.registeredAt) || "—",

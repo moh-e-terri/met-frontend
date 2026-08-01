@@ -2,7 +2,6 @@ export { fetchInstructorDashboard } from "./instructorDashboard";
 export { fetchInstructorFinance } from "./instructorFinance";
 export { fetchCourseStudents, courseStudentsQueryKeys } from "./courseStudents";
 export { fetchTeacherStudentProfile } from "./teacherStudentProfile";
-export { updateTeacherStudent, updateTeacherStudentAvatar } from "./teacherStudentUpdate";
 export { teacherQueryKeys } from "./queryKeys";
 export type {
   CourseStudent,

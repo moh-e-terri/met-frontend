@@ -62,6 +62,12 @@ export const CommunityFeed = ({
     },
   });
 
+  const authorProfileBasePath =
+    session?.role === "teacher"
+      ? "/teacher/students"
+      : session?.role === "admin"
+        ? "/admin/students"
+        : undefined;
   const posts = postsQuery.data ?? [];
   const pinnedPosts = posts.filter((post) => post.pinned);
   const regularPosts = posts.filter((post) => !post.pinned);
@@ -157,6 +163,7 @@ export const CommunityFeed = ({
               canModerate={canModerate || session?.role === "admin"}
               highlighted={focusPostId === post.id}
               autoOpenComments={focusPostId === post.id && openComments}
+              authorProfileBasePath={authorProfileBasePath}
             />
           ))}
         </div>
