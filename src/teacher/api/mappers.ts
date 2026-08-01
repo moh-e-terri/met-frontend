@@ -3,6 +3,7 @@ import {
   asArray,
   asRecord,
   extractApiList,
+  pickAuthUserId,
   pickId,
   pickNestedUser,
   pickNumber,
@@ -129,6 +130,45 @@ function mapStats(data: Record<string, unknown>): TeacherStatItem[] {
   ];
 }
 
+function resolveCourseUniversity(course: Record<string, unknown>): {
+  university?: string;
+  universityId?: string;
+} {
+  const allowedUniversities = asArray(course.allowedUniversities);
+  const firstAllowed = allowedUniversities[0];
+  const firstAllowedRecord =
+    typeof firstAllowed === "object" && firstAllowed ? asRecord(firstAllowed) : {};
+
+  const universityRecord = asRecord(
+    course.university ??
+      (typeof course.universityId === "object" && course.universityId
+        ? course.universityId
+        : null) ??
+      firstAllowedRecord,
+  );
+
+  const university = pickString(
+    universityRecord.name,
+    universityRecord.nameAr,
+    universityRecord.nameEn,
+    course.universityName,
+    pickString(firstAllowedRecord.name, firstAllowedRecord.nameEn),
+    typeof course.university === "string" ? course.university : "",
+  );
+
+  const universityId =
+    pickId(universityRecord) ||
+    pickId(firstAllowedRecord) ||
+    (typeof course.universityId === "string" ? course.universityId : "") ||
+    (typeof firstAllowed === "string" ? firstAllowed : "") ||
+    undefined;
+
+  return {
+    university: university || undefined,
+    universityId: universityId || undefined,
+  };
+}
+
 function mapCourses(data: Record<string, unknown>): TeacherCourseItem[] {
   const courses = asArray<Record<string, unknown>>(
     data.courses ?? data.myCourses ?? data.activeCourses ?? data.items,
@@ -143,8 +183,9 @@ function mapCourses(data: Record<string, unknown>): TeacherCourseItem[] {
 
       const students = pickNumber(course.studentsCount, course.students, course.enrolledCount);
       const lessons = pickNumber(course.lessonsCount, course.totalLessons, course.lessons);
+      const { university, universityId } = resolveCourseUniversity(course);
 
-      return {
+      const mapped: TeacherCourseItem = {
         id,
         title,
         image:
@@ -153,6 +194,9 @@ function mapCourses(data: Record<string, unknown>): TeacherCourseItem[] {
         students: students ? formatCompactCount(students) : "0",
         lessons: lessons ? String(lessons) : "0",
       };
+      if (university) mapped.university = university;
+      if (universityId) mapped.universityId = universityId;
+      return mapped;
     })
     .filter((course): course is TeacherCourseItem => course !== null);
 }
@@ -228,22 +272,65 @@ function mapTransactionStatus(raw: string): TeacherTransactionStatus {
   return "completed";
 }
 
+function mapFinanceTxType(raw: string): import("./types").TeacherFinanceTxType {
+  const value = raw.toLowerCase();
+  if (value.includes("cancel") || value.includes("إلغاء")) return "cancelled";
+  if (value.includes("release") || value.includes("صرف")) return "released";
+  if (value.includes("earn") || value.includes("دخل") || value.includes("تسجيل")) return "earned";
+  return "unknown";
+}
+
 function mapFinanceTransactions(raw: unknown): TeacherFinanceTransaction[] {
   return asArray<Record<string, unknown>>(raw).map((item, index) => {
     const course = asRecord(item.course);
-    const status = mapTransactionStatus(pickString(item.status, item.state));
-    const amountValue = pickNumber(item.amount, item.value, item.earnings);
+    const type = mapFinanceTxType(pickString(item.type, item.action, item.status));
+    const amountValue = pickNumber(item.amount, item.value, item.earnings, item.amountMET);
+    const signed =
+      type === "cancelled" ? -Math.abs(amountValue) : Math.abs(amountValue);
+    const status = mapTransactionStatus(
+      type === "cancelled" ? "failed" : pickString(item.status, item.state) || "completed",
+    );
+
+    const subtitle =
+      type === "released"
+        ? pickString(item.note) || "تم صرف مستحقاتك"
+        : type === "cancelled"
+          ? pickString(item.note) || "تم إلغاء دخل تسجيل الطالب"
+          : pickString(item.note, item.description) || "تسجيل طالب جديد";
 
     return {
-      id: pickString(item.id, item.reference, item.transactionId) || `#TR-${index + 1}`,
+      id: pickId(item) || pickString(item.reference, item.transactionId) || `#TR-${index + 1}`,
       date:
         formatRelativeTime(pickString(item.createdAt, item.date)) ||
         pickString(item.date) ||
         "—",
       course: pickString(course.title, course.name, item.courseTitle, item.title) || "—",
-      subtitle: pickString(item.subtitle, item.description, item.type) || "معاملة مالية",
-      amount: amountValue ? formatCurrency(amountValue) : pickString(item.amountLabel) || "—",
+      subtitle,
+      amount: `${signed >= 0 ? "+" : "-"}${Math.abs(signed).toLocaleString("en-US")} MET`,
+      amountValue: signed,
+      type,
       status,
+    };
+  });
+}
+
+function mapCourseBreakdown(raw: unknown): import("./types").TeacherCourseBreakdownItem[] {
+  return asArray<Record<string, unknown>>(raw).map((item, index) => {
+    const earned = pickNumber(item.earnedMET, item.earned);
+    const reserved = pickNumber(item.reservedMET, item.reserved);
+    const released = Math.max(
+      pickNumber(item.releasedMET, item.released),
+      earned - reserved,
+      0,
+    );
+    return {
+      courseId: pickString(item.courseId) || pickId(item) || `course-${index}`,
+      title: pickString(item.title, item.name, item.courseTitle) || "مقرر",
+      enrolledCount: pickNumber(item.enrolledCount, item.studentsCount, item.students),
+      totalIncomeMET: pickNumber(item.totalIncomeMET, item.totalIncome, earned),
+      earnedMET: earned,
+      reservedMET: reserved,
+      releasedMET: released,
     };
   });
 }
@@ -255,7 +342,9 @@ function mapChartPoints(raw: unknown, fallback: TeacherFinanceChartPoint[]): Tea
   const mapped = points.map((item, index) => ({
     label: pickString(item.label, item.month, item.week, item.name) || `نقطة ${index + 1}`,
     value: pickNumber(item.value, item.amount, item.total, item.earnings),
-    amount: pickString(item.amountLabel, item.formattedAmount) || formatCurrency(pickNumber(item.amount, item.value)),
+    amount:
+      pickString(item.amountLabel, item.formattedAmount) ||
+      formatCurrency(pickNumber(item.amount, item.value)),
     active: Boolean(item.active ?? item.isCurrent),
   }));
 
@@ -268,60 +357,86 @@ function mapChartPoints(raw: unknown, fallback: TeacherFinanceChartPoint[]): Tea
 
 export function mapInstructorFinance(raw: unknown): InstructorFinanceData {
   const data = asRecord(raw);
-  const summary = asRecord(data.summary ?? data.totals ?? data);
-  const total = pickNumber(summary.totalEarnings, summary.total, summary.earned, data.totalEarnings);
-  const available = pickNumber(summary.available, summary.availableBalance, summary.withdrawable);
-  const pending = pickNumber(summary.pending, summary.pendingBalance, summary.reserved);
-  const withdrawn = pickNumber(summary.withdrawn, summary.totalWithdrawn, summary.paidOut);
-  const growth = pickNumber(summary.growthPercent, summary.changePercent, summary.trend);
+  const summaryRaw = asRecord(data.summary ?? data.totals ?? data);
+  const totalEarnedMET = pickNumber(
+    summaryRaw.totalEarnedMET,
+    summaryRaw.totalEarnings,
+    summaryRaw.total,
+    summaryRaw.earned,
+    data.totalEarnings,
+  );
+  const totalEarnedUSD = pickNumber(summaryRaw.totalEarnedUSD, summaryRaw.totalUSD);
+  const reservedMET = pickNumber(
+    summaryRaw.reservedMET,
+    summaryRaw.reserved,
+    summaryRaw.pending,
+    summaryRaw.pendingBalance,
+  );
+  const reservedUSD = pickNumber(summaryRaw.reservedUSD);
+  const releasedMET = pickNumber(
+    summaryRaw.releasedMET,
+    summaryRaw.released,
+    summaryRaw.withdrawn,
+    summaryRaw.totalWithdrawn,
+    summaryRaw.paidOut,
+  );
+  const releasedUSD = pickNumber(summaryRaw.releasedUSD);
+  const growth = pickNumber(summaryRaw.growthPercent, summaryRaw.changePercent, summaryRaw.trend);
 
   const withdrawal = asRecord(data.withdrawalMethod ?? data.payoutMethod ?? data.paymentMethod);
   const chart = asRecord(data.chart);
+  const courseBreakdown = mapCourseBreakdown(data.courseBreakdown ?? data.courses);
+  const transactions = mapFinanceTransactions(
+    data.recentTransactions ?? data.transactions ?? data.payments ?? data.items,
+  );
 
   return {
+    summary: {
+      totalEarnedMET,
+      totalEarnedUSD,
+      reservedMET,
+      reservedUSD,
+      releasedMET,
+      releasedUSD,
+    },
+    courseBreakdown,
     stats: [
       {
-        label: "إجمالي الأرباح",
-        value: formatCurrency(total),
-        badge: growth ? `+${growth}%` : undefined,
+        label: "إجمالي الربح",
+        value: `${totalEarnedMET.toLocaleString("en-US")} MET`,
+        badge: totalEarnedUSD ? `${totalEarnedUSD.toLocaleString("en-US")} USD` : growth ? `+${growth}%` : undefined,
         icon: "/images/student/icon-wallet.svg",
         iconBg: "bg-[#eff6ff]",
         iconColor: "text-[#3b82f6]",
         badgeClassName: "bg-[#ecfdf5] text-[#14b8a6]",
       },
       {
-        label: "الرصيد المتاح",
-        value: formatCurrency(available),
+        label: "المبلغ المحجوز",
+        value: `${reservedMET.toLocaleString("en-US")} MET`,
+        badge: reservedUSD ? `${reservedUSD.toLocaleString("en-US")} USD` : undefined,
+        icon: "/images/student/icon-lock.svg",
+        iconBg: "bg-[#fff7ed]",
+        iconColor: "text-[#f5a524]",
+        badgeClassName: "bg-[#fff7ed] text-[#f5a524]",
+      },
+      {
+        label: "تم صرفه",
+        value: `${releasedMET.toLocaleString("en-US")} MET`,
+        badge: releasedUSD ? `${releasedUSD.toLocaleString("en-US")} USD` : undefined,
         icon: "/images/teacher/icon-money.svg",
         iconBg: "bg-[#ecfdf5]",
         iconColor: "text-[#14b8a6]",
-        showInfo: true,
-      },
-      {
-        label: "الرصيد المعلق",
-        value: formatCurrency(pending),
-        icon: "/images/student/icon-clock.svg",
-        iconBg: "bg-[#fff7ed]",
-        iconColor: "text-[#f5a524]",
-      },
-      {
-        label: "إجمالي المبلغ المسحوب",
-        value: formatCurrency(withdrawn),
-        icon: "/images/teacher/icon-history.svg",
-        iconBg: "bg-[#f1f5f9]",
-        iconColor: "text-[#64748b]",
+        badgeClassName: "bg-[#ecfdf5] text-[#14b8a6]",
       },
     ],
-    availableWithdrawal: formatCurrency(available),
+    availableWithdrawal: formatCurrency(reservedMET, "MET"),
     withdrawalMethod: pickString(withdrawal.type, withdrawal.provider)
       ? {
           type: pickString(withdrawal.type, withdrawal.provider, "PayPal Business"),
           email: pickString(withdrawal.email, withdrawal.account, withdrawal.maskedEmail) || "—",
         }
       : undefined,
-    transactions: mapFinanceTransactions(
-      data.transactions ?? data.recentTransactions ?? data.payments ?? data.items,
-    ),
+    transactions,
     chartMonthly: mapChartPoints(data.monthlyEarnings ?? data.monthlyChart ?? chart.monthly, []),
     chartWeekly: mapChartPoints(data.weeklyEarnings ?? data.weeklyChart ?? chart.weekly, []),
     alerts: asArray<Record<string, unknown>>(data.alerts ?? data.notifications).map(
@@ -349,13 +464,19 @@ export function mapCourseStudents(raw: unknown): CourseStudent[] {
     .map((item) => {
       const studentRef = asRecord(item.student ?? item.studentId);
       const nested = pickNestedUser(studentRef);
+      // Nested auth user fields win over Student profile (profile `_id` must not overwrite User `_id`).
       const user =
         pickId(nested) || pickString(nested.email, nested.firstName, nested.fullName)
-          ? { ...nested, ...studentRef }
-          : pickNestedUser(item);
+          ? { ...studentRef, ...nested }
+          : { ...pickNestedUser(item), ...studentRef, ...nested };
 
       const university = asRecord(user.university ?? studentRef.university);
-      const id = pickId(user) || pickId(studentRef) || pickId(item);
+      // Chat APIs require the auth User `_id`, not the Student profile `_id`.
+      const id =
+        pickAuthUserId(studentRef, item, nested, user) ||
+        pickId(nested) ||
+        pickId(studentRef) ||
+        pickId(item);
       const name = pickString(
         user.name,
         user.fullName,
@@ -368,9 +489,15 @@ export function mapCourseStudents(raw: unknown): CourseStudent[] {
       );
       if (!id || !name) return null;
 
+      const profileId = pickId(studentRef) || undefined;
       const student: CourseStudent = {
         id,
+        profileId: profileId && profileId !== id ? profileId : undefined,
         name,
+        firstName: pickString(user.firstName, studentRef.firstName) || undefined,
+        secondName: pickString(user.secondName, studentRef.secondName) || undefined,
+        familyName:
+          pickString(user.familyName, user.lastName, studentRef.familyName) || undefined,
         avatar:
           pickString(user.avatar, user.image, user.photo, studentRef.avatar, studentRef.image) ||
           TEACHER_DEFAULT_AVATAR,

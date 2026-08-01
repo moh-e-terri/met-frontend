@@ -25,7 +25,16 @@ export const StudentHeader = ({
   const isChatsPage = pathname.includes("/chats");
   const isMyCoursesPage = pathname.includes("/my-courses");
 
-  const { notifications, handleMarkAllRead, handleMarkRead } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    handleMarkAllRead,
+    handleMarkRead,
+    isLoading,
+    toast,
+    openToast,
+    dismissToast,
+  } = useNotifications();
 
   let centerContent = null;
 
@@ -70,7 +79,7 @@ export const StudentHeader = ({
 
   return (
     <DashboardHeader
-      avatar={STUDENT_DEFAULT_AVATAR}
+      avatar={session?.avatar || STUDENT_DEFAULT_AVATAR}
       displayName={displayName}
       roleSubtitle="طالب"
       sidebarId="student-sidebar"
@@ -80,9 +89,15 @@ export const StudentHeader = ({
       navbarZIndex={STUDENT_NAVBAR_Z_INDEX}
       centerContent={centerContent}
       messagesTo="/student/chats"
+      profileTo="/student/settings"
       notifications={notifications}
+      unreadCount={unreadCount}
       onMarkAllRead={handleMarkAllRead}
       onMarkRead={handleMarkRead}
+      isNotificationsLoading={isLoading}
+      toast={toast}
+      onOpenToast={openToast}
+      onDismissToast={dismissToast}
     />
   );
 };

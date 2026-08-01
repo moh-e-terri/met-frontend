@@ -11,6 +11,8 @@ export interface StudentContinueCourse {
   lessonsLabel: string;
   image: string;
   barColor: string;
+  university?: string;
+  universityId?: string;
 }
 
 export interface StudentDashboardProfile {

@@ -6,6 +6,8 @@ interface OrderSummarySidebarProps {
   isProcessing?: boolean;
   errorMessage?: string | null;
   onCompletePayment: () => void;
+  disabled?: boolean;
+  disabledLabel?: string;
 }
 
 export const OrderSummarySidebar = ({
@@ -13,6 +15,8 @@ export const OrderSummarySidebar = ({
   isProcessing = false,
   errorMessage,
   onCompletePayment,
+  disabled = false,
+  disabledLabel = "رصيدك غير كافٍ",
 }: OrderSummarySidebarProps) => {
   const total = order.metCost + order.vat;
 
@@ -64,11 +68,15 @@ export const OrderSummarySidebar = ({
 
       <button
         type="button"
-        disabled={isProcessing}
+        disabled={isProcessing || disabled}
         onClick={onCompletePayment}
-        className="mt-5 w-full rounded-2xl bg-[#14b8a6] py-3.5 text-sm font-bold text-white shadow-[0px_10px_15px_-3px_rgba(20,184,166,0.25)] transition-transform hover:scale-[1.01] disabled:opacity-70"
+        className="mt-5 w-full rounded-2xl bg-[#14b8a6] py-3.5 text-sm font-bold text-white shadow-[0px_10px_15px_-3px_rgba(20,184,166,0.25)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {isProcessing ? "جاري إتمام الاشتراك..." : "إتمام الدفع والاشتراك"}
+        {disabled
+          ? disabledLabel
+          : isProcessing
+            ? "جاري إتمام الاشتراك..."
+            : "سجّل الآن"}
       </button>
 
       <p

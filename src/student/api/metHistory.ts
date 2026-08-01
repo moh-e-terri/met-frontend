@@ -35,13 +35,27 @@ function formatMetAmount(value: number, type: MetTransactionType): string {
 
 function mapTransaction(raw: Record<string, unknown>, index: number): MetTransaction | null {
   const id = pickId(raw) || `tx-${index}`;
-  const amountValue = pickNumber(raw.amount, raw.metAmount, raw.points, raw.value);
-  const type = mapTransactionType(
+  const signedAmount = pickNumber(raw.amount, raw.metAmount, raw.points, raw.value);
+  const amountValue = Math.abs(signedAmount);
+  let type = mapTransactionType(
     pickString(raw.type, raw.operation, raw.action, raw.category),
   );
+
+  // Prefer API type; fall back to signed amount when type is missing/unknown
+  if (type === "unknown" && signedAmount !== 0) {
+    type = signedAmount < 0 ? "debit" : "credit";
+  }
+
+  const course = asRecord(raw.courseId ?? raw.course);
   const title =
-    pickString(raw.title, raw.description, raw.courseTitle, raw.courseName, raw.reason) ||
-    "عملية MET";
+    pickString(
+      raw.title,
+      raw.description,
+      course.title,
+      raw.courseTitle,
+      raw.courseName,
+      raw.reason,
+    ) || "عملية MET";
 
   const dateRaw = pickString(raw.createdAt, raw.date, raw.timestamp);
   const date = dateRaw

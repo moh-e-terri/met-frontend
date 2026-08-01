@@ -22,7 +22,7 @@ export const StudentHomePage = () => {
 
   const communityQuery = useQuery({
     queryKey: studentQueryKeys.communityPosts(2, session?.userId),
-    queryFn: () => fetchCommunityPosts(2),
+    queryFn: () => fetchCommunityPosts(2, session?.userId),
     enabled: Boolean(session?.userId),
   });
 

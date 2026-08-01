@@ -30,7 +30,7 @@ const mainLinks = [
     icon: "/images/student/icon-book.svg",
   },
   {
-    label: "وسائل الدفع",
+    label: "محفظتي",
     to: "/student/payments",
     icon: "/images/student/icon-payment.svg",
   },

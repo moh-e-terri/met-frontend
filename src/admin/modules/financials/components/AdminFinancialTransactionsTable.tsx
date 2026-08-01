@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { AdminFinancePayment } from "@/admin/api";
 import { Pagination } from "@/shared/components/Pagination";
+import { tableCellClass } from "@/shared/components/TablePersonCell";
 import { useClientPagination } from "@/shared/hooks/useClientPagination";
 import { transactionStatusLabels } from "../data/mockAdminFinancials";
 
@@ -37,12 +38,12 @@ export const AdminFinancialTransactionsTable = ({
         <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[800px]">
             <thead>
-              <tr className="border-b border-[#e2e8f0] text-right text-sm text-[#64748b]">
-                <th className="px-3 py-3 font-medium">الدورة والطالب</th>
-                <th className="px-3 py-3 font-medium">المبلغ</th>
-                <th className="px-3 py-3 font-medium">حصة المدرس / المنصة</th>
-                <th className="px-3 py-3 font-medium">الحالة</th>
-                <th className="px-3 py-3 font-medium">صرف</th>
+              <tr className="border-b border-[#e2e8f0] text-sm text-[#64748b]">
+                <th className={tableCellClass.th}>الدورة والطالب</th>
+                <th className={tableCellClass.th}>المبلغ</th>
+                <th className={tableCellClass.th}>حصة المدرس / المنصة</th>
+                <th className={tableCellClass.th}>الحالة</th>
+                <th className={tableCellClass.th}>صرف</th>
               </tr>
             </thead>
             <tbody>
@@ -57,36 +58,38 @@ export const AdminFinancialTransactionsTable = ({
                     key={tx.id}
                     className="border-b border-[#f1f5f9] text-sm last:border-0"
                   >
-                    <td className="px-3 py-4">
-                      <div className="flex items-center justify-end gap-3">
-                        <div className="text-right">
-                          <p className="font-bold text-[#0f172a]">{tx.course}</p>
-                          <p className="mt-0.5 text-xs text-[#94a3b8]">
-                            {tx.student}
-                          </p>
-                        </div>
+                    <td className={tableCellClass.td}>
+                      <div className="flex items-center gap-3">
                         <img
                           src={tx.courseIcon}
                           alt=""
-                          className="size-10 rounded-xl"
+                          className="size-10 shrink-0 rounded-xl object-cover"
                           aria-hidden
                         />
+                        <div className="min-w-0 text-right">
+                          <p className="truncate font-bold text-[#0f172a]">{tx.course}</p>
+                          <p className="mt-0.5 truncate text-xs text-[#94a3b8]">
+                            {tx.student}
+                          </p>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-3 py-4 font-bold text-[#0f172a]" dir="ltr">
-                      {tx.amount}
+                    <td className={tableCellClass.tdStrong}>
+                      <span dir="ltr">{tx.amount}</span>
                     </td>
-                    <td className="px-3 py-4 text-[#475569]" dir="ltr">
-                      {tx.trainerShare} / {tx.platformShare}
+                    <td className={tableCellClass.tdMuted}>
+                      <span dir="ltr">
+                        {tx.trainerShare} / {tx.platformShare}
+                      </span>
                     </td>
-                    <td className="px-3 py-4">
+                    <td className={tableCellClass.td}>
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
                       >
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-3 py-4">
+                    <td className={tableCellClass.td}>
                       {tx.instructorId && onRelease && tx.status !== "completed" ? (
                         <div className="flex items-center gap-2">
                           <input

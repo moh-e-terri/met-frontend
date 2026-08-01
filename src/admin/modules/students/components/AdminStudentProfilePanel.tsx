@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { getAdminBasePath } from "@/core/routing/appSurface";
 import { cn } from "@/shared/utils/cn";
 import { AnimatedBar, CountUp } from "@/shared/motion";
+import { StartChatButton } from "@/shared/modules/chats";
 import type { AdminStudent } from "../data/mockAdminStudents";
 import { AdminIcon } from "../../dashboard/components/AdminIcon";
 
@@ -19,6 +22,8 @@ export const AdminStudentProfilePanel = ({
   metError,
   metSuccess,
 }: AdminStudentProfilePanelProps) => {
+  const basePath = getAdminBasePath();
+  const profilePath = `${basePath}/students/${student.id}`;
   const [amount, setAmount] = useState("100");
   const [description, setDescription] = useState("منحة تعليمية");
   return (
@@ -27,16 +32,35 @@ export const AdminStudentProfilePanel = ({
       dir="rtl"
     >
       <div className="mb-5 flex flex-col items-center text-center">
-        <img
-          src={student.avatar}
-          alt=""
-          className="size-20 rounded-full border-4 border-[#fff7ed]"
-          aria-hidden
-        />
-        <h3 className="mt-3 text-lg font-bold text-[#0f172a]">{student.name}</h3>
+        <Link to={profilePath} className="group flex flex-col items-center">
+          <img
+            src={student.avatar}
+            alt=""
+            className="size-20 rounded-full border-4 border-[#fff7ed] transition-opacity group-hover:opacity-90"
+            aria-hidden
+          />
+          <h3 className="mt-3 text-lg font-bold text-[#0f172a] transition-colors group-hover:text-[#f5a524]">
+            {student.name}
+          </h3>
+        </Link>
         <p className="mt-1 text-sm text-[#64748b]" dir="ltr">
           {student.email}
         </p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <StartChatButton
+            userId={student.userId || student.id}
+            name={student.name}
+            chatsPath="/admin/chats"
+            iconOnly={false}
+            label="محادثة مع الطالب"
+          />
+          <Link
+            to={profilePath}
+            className="inline-flex items-center rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-xs font-semibold text-[#0f172a] transition-colors hover:border-[#f5a524]/40 hover:text-[#f5a524]"
+          >
+            عرض الملف الكامل
+          </Link>
+        </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <span className="rounded-full bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#3b82f6]">

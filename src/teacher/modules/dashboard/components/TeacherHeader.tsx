@@ -26,7 +26,16 @@ export const TeacherHeader = ({
   const isCommunityPage = pathname.includes("/community");
   const isChatsPage = pathname.includes("/chats");
 
-  const { notifications, handleMarkAllRead, handleMarkRead } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    handleMarkAllRead,
+    handleMarkRead,
+    isLoading,
+    toast,
+    openToast,
+    dismissToast,
+  } = useNotifications();
 
   let centerContent = null;
 
@@ -51,10 +60,7 @@ export const TeacherHeader = ({
   } else if (isChatsPage) {
     centerContent = (
       <div className="hidden min-w-0 flex-1 px-2 md:flex md:justify-center lg:px-6">
-        <h1
-          className="text-base font-bold text-[#0f172a] sm:text-lg"
-          dir="rtl"
-        >
+        <h1 className="text-base font-bold text-[#0f172a] sm:text-lg" dir="rtl">
           مركز الرسائل
         </h1>
       </div>
@@ -63,7 +69,7 @@ export const TeacherHeader = ({
 
   return (
     <DashboardHeader
-      avatar={TEACHER_DEFAULT_AVATAR}
+      avatar={session?.avatar || TEACHER_DEFAULT_AVATAR}
       displayName={displayName}
       roleSubtitle="مدرّس معتمد"
       sidebarId="teacher-sidebar"
@@ -73,9 +79,15 @@ export const TeacherHeader = ({
       navbarZIndex={TEACHER_NAVBAR_Z_INDEX}
       centerContent={centerContent}
       messagesTo={`${basePath}/chats`}
+      profileTo={`${basePath}/settings`}
       notifications={notifications}
+      unreadCount={unreadCount}
       onMarkAllRead={handleMarkAllRead}
       onMarkRead={handleMarkRead}
+      isNotificationsLoading={isLoading}
+      toast={toast}
+      onOpenToast={openToast}
+      onDismissToast={dismissToast}
     />
   );
 };

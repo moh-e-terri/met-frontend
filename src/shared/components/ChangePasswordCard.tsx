@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { changePassword } from "@/core/auth/authService";
+import { PasswordInput } from "./PasswordInput";
 
 interface ChangePasswordCardProps {
   className?: string;
@@ -59,47 +60,27 @@ export const ChangePasswordCard = ({ className }: ChangePasswordCardProps) => {
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-[#0f172a]">
-            كلمة المرور الحالية
-          </label>
-          <input
-            type="password"
-            value={currentPassword}
-            onChange={(event) => setCurrentPassword(event.target.value)}
-            required
-            autoComplete="current-password"
-            className="w-full rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-right text-sm text-[#0f172a] outline-none transition-colors focus:border-[#f5a524]/30 focus:bg-white"
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-[#0f172a]">
-            كلمة المرور الجديدة
-          </label>
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            required
-            autoComplete="new-password"
-            className="w-full rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-right text-sm text-[#0f172a] outline-none transition-colors focus:border-[#f5a524]/30 focus:bg-white"
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-[#0f172a]">
-            تأكيد كلمة المرور الجديدة
-          </label>
-          <input
-            type="password"
-            value={confirmNewPassword}
-            onChange={(event) => setConfirmNewPassword(event.target.value)}
-            required
-            autoComplete="new-password"
-            className="w-full rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-right text-sm text-[#0f172a] outline-none transition-colors focus:border-[#f5a524]/30 focus:bg-white"
-          />
-        </div>
+        <PasswordInput
+          label="كلمة المرور الحالية"
+          value={currentPassword}
+          onChange={(event) => setCurrentPassword(event.target.value)}
+          required
+          autoComplete="current-password"
+        />
+        <PasswordInput
+          label="كلمة المرور الجديدة"
+          value={newPassword}
+          onChange={(event) => setNewPassword(event.target.value)}
+          required
+          autoComplete="new-password"
+        />
+        <PasswordInput
+          label="تأكيد كلمة المرور الجديدة"
+          value={confirmNewPassword}
+          onChange={(event) => setConfirmNewPassword(event.target.value)}
+          required
+          autoComplete="new-password"
+        />
 
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

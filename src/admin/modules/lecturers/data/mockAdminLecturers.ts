@@ -12,7 +12,13 @@ export type LecturerStatus = "active" | "pending" | "inactive";
 
 export interface AdminLecturer {
   id: string;
+  /** Auth user id — required for starting chats */
+  userId: string;
   name: string;
+  firstName?: string;
+  secondName?: string;
+  familyName?: string;
+  email?: string;
   specialization: string;
   coursesCount: number;
   earnings: string;
@@ -21,7 +27,20 @@ export interface AdminLecturer {
   title: string;
   joinedDate: string;
   studentsCount: string;
-  managedCourses: { name: string; revenue: string }[];
+  phoneNumber?: string;
+  dateOfBirth?: string;
+  paypalAccount?: string;
+  bio?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  managedCourses: {
+    id?: string;
+    name: string;
+    revenue: string;
+    enrolledCount?: number;
+    thumbnail?: string;
+    metCost?: number;
+  }[];
   totalProfit: string;
   availableBalance: string;
   pendingBalance: string;
@@ -30,6 +49,7 @@ export interface AdminLecturer {
 export const adminLecturers: AdminLecturer[] = [
   {
     id: "1",
+    userId: "1",
     name: "محمد بن قحطان",
     specialization: "UI/UX Design",
     coursesCount: 8,
@@ -49,6 +69,7 @@ export const adminLecturers: AdminLecturer[] = [
   },
   {
     id: "2",
+    userId: "2",
     name: "محمد بن قحطان",
     specialization: "Data Science",
     coursesCount: 15,
@@ -68,6 +89,7 @@ export const adminLecturers: AdminLecturer[] = [
   },
   {
     id: "3",
+    userId: "3",
     name: "محمد بن قحطان",
     specialization: "Digital Marketing",
     coursesCount: 5,
@@ -87,6 +109,7 @@ export const adminLecturers: AdminLecturer[] = [
   },
   {
     id: "4",
+    userId: "4",
     name: "نوال آل سعود",
     specialization: "Cybersecurity",
     coursesCount: 11,

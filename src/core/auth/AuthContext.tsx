@@ -8,13 +8,18 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { isApiError } from "@/core/api/client";
 import {
-  getSession,
   refreshCurrentUser,
   signIn as signInService,
   signOut as signOutService,
   signUp as signUpService,
 } from "./authService";
+import {
+  clearAuthToken,
+  clearLegacyAuthStorage,
+  onAuthTokenCleared,
+} from "./tokenStorage";
 import type { AuthSession, AuthSignUpPayload } from "./types";
 
 interface AuthContextValue {
@@ -23,6 +28,7 @@ interface AuthContextValue {
   signIn: (identifier: string, password: string) => Promise<AuthSession>;
   signUp: (payload: AuthSignUpPayload) => Promise<AuthSession>;
   signOut: () => void;
+  refreshSession: () => Promise<AuthSession | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -37,30 +43,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [queryClient]);
 
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
+    clearLegacyAuthStorage();
 
-    refreshCurrentUser()
+    const bootstrap = async () => {
+      try {
+        return await refreshCurrentUser();
+      } catch (error) {
+        // Retry once for cold starts / transient network errors.
+        if (isApiError(error) && error.status === 401) {
+          throw error;
+        }
+        return await refreshCurrentUser();
+      }
+    };
+
+    bootstrap()
       .then((nextSession) => {
-        if (isMounted) setSession(nextSession ?? getSession());
+        if (!cancelled) setSession(nextSession);
       })
-      .catch(() => {
-        if (isMounted) setSession(getSession());
+      .catch((error) => {
+        // Only wipe tokens when this effect is still active (avoids Strict Mode races).
+        if (!cancelled && isApiError(error) && error.status === 401) {
+          clearAuthToken();
+        }
+        if (!cancelled) setSession(null);
       })
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       });
 
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
   }, []);
 
-  const signIn = useCallback(async (identifier: string, password: string) => {
-    resetCachedQueries();
-    const nextSession = await signInService(identifier, password);
-    setSession(nextSession);
-    return nextSession;
+  useEffect(() => {
+    return onAuthTokenCleared(() => {
+      setSession(null);
+      resetCachedQueries();
+    });
   }, [resetCachedQueries]);
+
+  const signIn = useCallback(
+    async (identifier: string, password: string) => {
+      resetCachedQueries();
+      const nextSession = await signInService(identifier, password);
+      setSession(nextSession);
+      return nextSession;
+    },
+    [resetCachedQueries],
+  );
 
   const signUp = useCallback(
     async (payload: AuthSignUpPayload) => {
@@ -78,9 +111,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSession(null);
   }, [resetCachedQueries]);
 
+  const refreshSession = useCallback(async () => {
+    const nextSession = await refreshCurrentUser();
+    setSession(nextSession);
+    return nextSession;
+  }, []);
+
   const value = useMemo(
-    () => ({ session, isLoading, signIn, signUp, signOut }),
-    [session, isLoading, signIn, signUp, signOut],
+    () => ({ session, isLoading, signIn, signUp, signOut, refreshSession }),
+    [session, isLoading, signIn, signUp, signOut, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

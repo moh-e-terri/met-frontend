@@ -29,9 +29,24 @@ const mainLinks = [
     icon: "/images/student/icon-active-user.svg",
   },
   {
+    label: "بيانات المنصة",
+    to: "overview",
+    icon: "/images/student/icon-dashboard.svg",
+  },
+  {
     label: "الطلاب",
     to: "students",
     icon: "/images/student/icon-groups.svg",
+  },
+  {
+    label: "المحادثات",
+    to: "chats",
+    icon: "/images/student/icon-chat.svg",
+  },
+  {
+    label: "المجتمع العام",
+    to: "community",
+    icon: "/images/student/icon-community.svg",
   },
   {
     label: "المالية",

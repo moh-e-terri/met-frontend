@@ -19,6 +19,8 @@ export interface TeacherCourseItem {
   image: string;
   students: string;
   lessons: string;
+  university?: string;
+  universityId?: string;
 }
 
 export interface TeacherActivityItem {
@@ -67,12 +69,35 @@ export interface TeacherFinanceStat {
 
 export type TeacherTransactionStatus = "completed" | "pending" | "failed";
 
+export type TeacherFinanceTxType = "earned" | "released" | "cancelled" | "unknown";
+
+export interface TeacherFinanceSummary {
+  totalEarnedMET: number;
+  totalEarnedUSD: number;
+  reservedMET: number;
+  reservedUSD: number;
+  releasedMET: number;
+  releasedUSD: number;
+}
+
+export interface TeacherCourseBreakdownItem {
+  courseId: string;
+  title: string;
+  enrolledCount: number;
+  totalIncomeMET: number;
+  earnedMET: number;
+  reservedMET: number;
+  releasedMET: number;
+}
+
 export interface TeacherFinanceTransaction {
   id: string;
   date: string;
   course: string;
   subtitle: string;
   amount: string;
+  amountValue: number;
+  type: TeacherFinanceTxType;
   status: TeacherTransactionStatus;
 }
 
@@ -92,6 +117,9 @@ export interface TeacherPaymentAlert {
 }
 
 export interface InstructorFinanceData {
+  summary: TeacherFinanceSummary;
+  courseBreakdown: TeacherCourseBreakdownItem[];
+  /** @deprecated prefer recentTransactions — kept for legacy UI */
   stats: TeacherFinanceStat[];
   availableWithdrawal: string;
   withdrawalMethod?: {
@@ -105,8 +133,14 @@ export interface InstructorFinanceData {
 }
 
 export interface CourseStudent {
+  /** Auth user id — for chat and profile routes */
   id: string;
+  /** Student profile document id when available */
+  profileId?: string;
   name: string;
+  firstName?: string;
+  secondName?: string;
+  familyName?: string;
   avatar: string;
   email?: string;
   progress: number;

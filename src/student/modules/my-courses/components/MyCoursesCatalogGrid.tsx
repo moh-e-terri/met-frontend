@@ -76,6 +76,9 @@ export const MyCoursesCatalogGrid = ({ courses, isLoading }: MyCoursesCatalogGri
             <h3 className="min-h-14 text-right text-lg font-bold leading-snug text-[#0f172a]">
               {course.title}
             </h3>
+            {course.university ? (
+              <p className="text-sm font-semibold text-[#f5a524]">{course.university}</p>
+            ) : null}
 
             <div className="flex items-center justify-between text-xs text-[#64748b]">
               <span className="inline-flex items-center gap-1.5">

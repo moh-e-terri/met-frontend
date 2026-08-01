@@ -1,76 +1,101 @@
+import { Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
-import { WebsiteRouter } from "../../website/routes/WebsiteRouter";
-import { AdminRouter } from "../../admin/routes/AdminRouter";
-import { StudentRouter } from "../../student/routes/StudentRouter";
-import { TeacherRouter } from "../../teacher/routes/TeacherRouter";
-import { SigninPage } from "../../website/modules/auth";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { getAppSurface } from "./appSurface";
+import { RouteLoadingFallback } from "@/shared/components/RouteLoadingFallback";
+import { lazyRoute } from "@/shared/routing/lazyRoute";
+
+const AdminRouter = lazyRoute(
+  () => import("../../admin/routes/AdminRouter"),
+  "AdminRouter",
+);
+const StudentRouter = lazyRoute(
+  () => import("../../student/routes/StudentRouter"),
+  "StudentRouter",
+);
+const TeacherRouter = lazyRoute(
+  () => import("../../teacher/routes/TeacherRouter"),
+  "TeacherRouter",
+);
+const WebsiteRouter = lazyRoute(
+  () => import("../../website/routes/WebsiteRouter"),
+  "WebsiteRouter",
+);
+const SigninPage = lazyRoute(
+  () => import("../../website/modules/auth/views/SigninPage"),
+  "SigninPage",
+);
 
 const MainAppRouter = () => {
   return (
-    <Routes>
-      <Route
-        path="/admin/*"
-        element={
-          <ProtectedRoute role="admin">
-            <AdminRouter />
-          </ProtectedRoute>
-        }
-      />
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Routes>
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminRouter />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/teacher/*"
-        element={
-          <ProtectedRoute role="teacher">
-            <TeacherRouter />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/teacher/*"
+          element={
+            <ProtectedRoute role="teacher">
+              <TeacherRouter />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/student/*"
-        element={
-          <ProtectedRoute role="student">
-            <StudentRouter />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/student/*"
+          element={
+            <ProtectedRoute role="student">
+              <StudentRouter />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route path="/*" element={<WebsiteRouter />} />
-    </Routes>
+        <Route path="/*" element={<WebsiteRouter />} />
+      </Routes>
+    </Suspense>
   );
 };
 
 const TeacherSurfaceRouter = () => {
   return (
-    <Routes>
-      <Route path="/signin" element={<SigninPage />} />
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute role="teacher">
-            <TeacherRouter />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Routes>
+        <Route path="/signin" element={<SigninPage />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute role="teacher">
+              <TeacherRouter />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
   );
 };
 
 const AdminSurfaceRouter = () => {
   return (
-    <Routes>
-      <Route path="/signin" element={<SigninPage />} />
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute role="admin">
-            <AdminRouter />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Routes>
+        <Route path="/signin" element={<SigninPage />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminRouter />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
   );
 };
 

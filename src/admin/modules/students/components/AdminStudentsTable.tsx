@@ -1,6 +1,10 @@
+import { Link } from "react-router-dom";
+import { getAdminBasePath } from "@/core/routing/appSurface";
 import { cn } from "@/shared/utils/cn";
 import { Pagination } from "@/shared/components/Pagination";
 import { useClientPagination } from "@/shared/hooks/useClientPagination";
+import { StartChatButton } from "@/shared/modules/chats";
+import { TablePersonCell, tableCellClass } from "@/shared/components/TablePersonCell";
 import { useEffect, useMemo, useState } from "react";
 import {
   filterStudentsByTab,
@@ -25,6 +29,7 @@ export const AdminStudentsTable = ({
   onSelect,
   isLoading,
 }: AdminStudentsTableProps) => {
+  const basePath = getAdminBasePath();
   const [activeTab, setActiveTab] = useState<StudentTab>("active");
 
   const filteredStudents = useMemo(
@@ -77,149 +82,168 @@ export const AdminStudentsTable = ({
       ) : filteredStudents.length === 0 ? (
         <p className="py-10 text-center text-sm text-[#64748b]">لا يوجد طلاب مطابقون.</p>
       ) : (
-      <>
-      <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[720px]">
-          <thead>
-            <tr className="border-b border-[#e2e8f0] text-right text-sm text-[#64748b]">
-              <th className="px-3 py-3 font-medium">الطالب</th>
-              <th className="px-3 py-3 font-medium">الدورات</th>
-              <th className="px-3 py-3 font-medium">إجمالي المدفوع</th>
-              <th className="px-3 py-3 font-medium">الحالة</th>
-              <th className="px-3 py-3 font-medium">إجراء</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="hidden overflow-x-auto lg:block">
+            <table className="w-full min-w-[720px]">
+              <thead>
+                <tr className="border-b border-[#e2e8f0] text-sm text-[#64748b]">
+                  <th className={tableCellClass.th}>الطالب</th>
+                  <th className={tableCellClass.th}>الدورات</th>
+                  <th className={tableCellClass.th}>إجمالي المدفوع</th>
+                  <th className={tableCellClass.th}>الحالة</th>
+                  <th className={tableCellClass.th}>إجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedStudents.map((student) => {
+                  const status = paymentStatusLabels[student.paymentStatus];
+                  const isSelected = student.id === selectedId;
+
+                  return (
+                    <tr
+                      key={student.id}
+                      onClick={() => onSelect(student)}
+                      className={cn(
+                        "cursor-pointer border-b border-[#f1f5f9] text-sm transition-colors last:border-0",
+                        isSelected ? "bg-[#fff7ed]/60" : "hover:bg-[#f8fafc]",
+                      )}
+                    >
+                      <td className={tableCellClass.td}>
+                        <Link
+                          to={`${basePath}/students/${student.id}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="block"
+                        >
+                          <TablePersonCell
+                            name={student.name}
+                            avatar={student.avatar}
+                            avatarClassName="size-10"
+                            subtitle={
+                              <p className="truncate text-xs text-[#94a3b8]" dir="ltr">
+                                {student.email}
+                              </p>
+                            }
+                          />
+                        </Link>
+                      </td>
+                      <td className={tableCellClass.td}>
+                        <span className="inline-flex size-8 items-center justify-center rounded-lg bg-[#eff6ff] text-sm font-bold text-[#3b82f6]">
+                          {student.coursesCount}
+                        </span>
+                      </td>
+                      <td className={tableCellClass.td}>
+                        <p className="font-bold text-[#0f172a]" dir="ltr">
+                          {student.totalPaid}
+                        </p>
+                        <p
+                          className={`mt-0.5 text-xs font-medium ${paymentNoteToneClass[student.paymentNoteTone]}`}
+                        >
+                          {student.paymentNote}
+                        </p>
+                      </td>
+                      <td className={tableCellClass.td}>
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
+                        >
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className={tableCellClass.td}>
+                        <div className="flex items-center gap-2">
+                          <StartChatButton
+                            userId={student.userId || student.id}
+                            name={student.name}
+                            chatsPath="/admin/chats"
+                          />
+                          <button
+                            type="button"
+                            className="flex size-8 items-center justify-center rounded-lg border border-[#e2e8f0] text-[#64748b] transition-colors hover:bg-[#f8fafc] hover:text-[#3b82f6]"
+                            aria-label="عرض الملف"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onSelect(student);
+                            }}
+                          >
+                            <AdminIcon
+                              src="/images/student/icon-eye.svg"
+                              className="size-4"
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="space-y-3 lg:hidden">
             {pagedStudents.map((student) => {
               const status = paymentStatusLabels[student.paymentStatus];
               const isSelected = student.id === selectedId;
 
               return (
-                <tr
+                <button
                   key={student.id}
+                  type="button"
                   onClick={() => onSelect(student)}
                   className={cn(
-                    "cursor-pointer border-b border-[#f1f5f9] text-sm transition-colors last:border-0",
-                    isSelected ? "bg-[#fff7ed]/60" : "hover:bg-[#f8fafc]",
+                    "w-full rounded-2xl border p-4 text-right transition-colors",
+                    isSelected
+                      ? "border-[#f5a524]/30 bg-[#fff7ed]/60"
+                      : "border-[#f1f5f9] bg-[#f8fafc] hover:bg-white",
                   )}
                 >
-                  <td className="px-3 py-4">
-                    <div className="flex items-center justify-end gap-3">
-                      <div className="min-w-0 text-right">
-                        <p className="font-bold text-[#0f172a]">{student.name}</p>
-                        <p className="mt-0.5 text-xs text-[#94a3b8]" dir="ltr">
-                          {student.email}
-                        </p>
-                      </div>
-                      <img
-                        src={student.avatar}
-                        alt=""
-                        className="size-10 shrink-0 rounded-full"
-                        aria-hidden
-                      />
-                    </div>
-                  </td>
-                  <td className="px-3 py-4">
-                    <span className="inline-flex size-8 items-center justify-center rounded-lg bg-[#eff6ff] text-sm font-bold text-[#3b82f6]">
-                      {student.coursesCount}
-                    </span>
-                  </td>
-                  <td className="px-3 py-4 text-right">
-                    <p className="font-bold text-[#0f172a]" dir="ltr">
-                      {student.totalPaid}
-                    </p>
-                    <p
-                      className={`mt-0.5 text-xs font-medium ${paymentNoteToneClass[student.paymentNoteTone]}`}
-                    >
-                      {student.paymentNote}
-                    </p>
-                  </td>
-                  <td className="px-3 py-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
                     <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
                     >
                       {status.label}
                     </span>
-                  </td>
-                  <td className="px-3 py-4">
-                    <button
-                      type="button"
-                      className="flex size-8 items-center justify-center rounded-lg border border-[#e2e8f0] text-[#64748b] transition-colors hover:bg-[#f8fafc] hover:text-[#3b82f6]"
-                      aria-label="عرض الملف"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onSelect(student);
-                      }}
-                    >
-                      <AdminIcon
-                        src="/images/student/icon-eye.svg"
-                        className="size-4"
-                      />
-                    </button>
-                  </td>
-                </tr>
+                    <span className="font-bold text-[#0f172a]" dir="ltr">
+                      {student.totalPaid}
+                    </span>
+                  </div>
+                  <Link
+                    to={`${basePath}/students/${student.id}`}
+                    onClick={(event) => event.stopPropagation()}
+                    className="block"
+                  >
+                    <TablePersonCell
+                      name={student.name}
+                      avatar={student.avatar}
+                      avatarClassName="size-10"
+                      subtitle={
+                        <p className="truncate text-xs text-[#94a3b8]" dir="ltr">
+                          {student.email}
+                        </p>
+                      }
+                    />
+                  </Link>
+                  <div className="mt-3 flex justify-start">
+                    <StartChatButton
+                      userId={student.userId || student.id}
+                      name={student.name}
+                      chatsPath="/admin/chats"
+                      iconOnly={false}
+                    />
+                  </div>
+                </button>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      <div className="space-y-3 lg:hidden">
-        {pagedStudents.map((student) => {
-          const status = paymentStatusLabels[student.paymentStatus];
-          const isSelected = student.id === selectedId;
-
-          return (
-            <button
-              key={student.id}
-              type="button"
-              onClick={() => onSelect(student)}
-              className={cn(
-                "w-full rounded-2xl border p-4 text-right transition-colors",
-                isSelected
-                  ? "border-[#f5a524]/30 bg-[#fff7ed]/60"
-                  : "border-[#f1f5f9] bg-[#f8fafc] hover:bg-white",
-              )}
-            >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
-                >
-                  {status.label}
-                </span>
-                <span className="font-bold text-[#0f172a]" dir="ltr">
-                  {student.totalPaid}
-                </span>
-              </div>
-              <div className="flex items-center justify-end gap-3">
-                <div>
-                  <p className="font-bold text-[#0f172a]">{student.name}</p>
-                  <p className="mt-1 text-xs text-[#94a3b8]" dir="ltr">
-                    {student.email}
-                  </p>
-                </div>
-                <img
-                  src={student.avatar}
-                  alt=""
-                  className="size-10 rounded-full"
-                  aria-hidden
-                />
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <Pagination
-        pagination={pagination}
-        onPageChange={setPage}
-        summary={
-          <>
-            عرض {pagedStudents.length} من أصل {filteredStudents.length} طالب
-          </>
-        }
-      />
-      </>
+          <Pagination
+            pagination={pagination}
+            onPageChange={setPage}
+            summary={
+              <>
+                عرض {pagedStudents.length} من أصل {filteredStudents.length} طالب
+              </>
+            }
+          />
+        </>
       )}
     </section>
   );

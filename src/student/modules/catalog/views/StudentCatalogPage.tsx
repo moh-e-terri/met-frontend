@@ -73,6 +73,7 @@ export const StudentCatalogPage = () => {
         courses={courses}
         isLoading={catalogQuery.isLoading}
         isFiltered={Boolean(debouncedSearch || level)}
+        myMetPoints={catalogQuery.data?.myMetPoints ?? 0}
       />
 
       <Pagination

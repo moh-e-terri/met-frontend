@@ -97,6 +97,22 @@ export function filterPostsByCourseTag(
 ): CommunityPostView[] {
   const courseTag = `course:${courseId}`;
   return posts.filter(
-    (post) => post.tag === courseTag || post.content.includes(courseTag),
+    (post) =>
+      post.courseId === courseId ||
+      post.tag === courseTag ||
+      post.content.includes(courseTag) ||
+      post.content.includes(`[[course:${courseId}]]`),
   );
+}
+
+/** Hide course-scoped posts from the general community feed. */
+export function excludeCourseCommunityPosts(
+  posts: CommunityPostView[],
+): CommunityPostView[] {
+  return posts.filter((post) => {
+    if (post.courseId) return false;
+    if (post.tag?.startsWith("course:")) return false;
+    if (/\[\[course:[^\]]+\]\]/.test(post.content)) return false;
+    return true;
+  });
 }

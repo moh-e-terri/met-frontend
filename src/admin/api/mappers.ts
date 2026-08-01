@@ -7,6 +7,7 @@ import {
   pickNestedUser,
   pickNumber,
   pickString,
+  resolveMediaUrl,
 } from "@/core/api/utils";
 import type { AdminCourseSummary } from "../modules/dashboard/data/mockAdminDashboard";
 import type { AdminCatalogCourse, AdminCourseStatus } from "../modules/courses/data/mockAdminCourses";
@@ -54,22 +55,49 @@ function flattenPersonRecord(raw: Record<string, unknown>): Record<string, unkno
     secondName: pickString(raw.secondName, nested.secondName, nested.middleName),
     familyName: pickString(raw.familyName, nested.familyName, nested.lastName),
     avatar: pickString(raw.avatar, raw.image, raw.photo, nested.profileImage, nested.avatar, nested.image),
+    profileImage: pickString(nested.profileImage, raw.profileImage, nested.avatar, raw.avatar),
+    phoneNumber: pickString(raw.phoneNumber, nested.phoneNumber, raw.phone),
+    dateOfBirth: pickString(raw.dateOfBirth, nested.dateOfBirth),
+    paypalAccount: pickString(raw.paypalAccount, nested.paypalAccount),
+    isActive: raw.isActive !== false && nested.isActive !== false,
     bio: pickString(raw.bio, nested.bio),
     status: pickString(raw.status, nested.status, nested.isActive === false ? "inactive" : ""),
   };
 }
 
+function cleanNamePart(value: unknown): string {
+  const text = pickString(value);
+  if (!text) return "";
+  if (/^(undefined|null|n\/a)$/i.test(text)) return "";
+  return text;
+}
+
+function sanitizeDisplayName(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((part) => cleanNamePart(part))
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
 function fullName(raw: Record<string, unknown>): string {
   const source = flattenPersonRecord(raw);
+  const built = [
+    source.firstName,
+    source.secondName,
+    source.middleName,
+    source.familyName,
+    source.lastName,
+  ]
+    .map((part) => cleanNamePart(part))
+    .filter(Boolean)
+    .join(" ");
 
-  return pickString(
-    source.name,
-    source.fullName,
-    [source.firstName, source.secondName, source.middleName, source.familyName, source.lastName]
-      .map((part) => pickString(part))
-      .filter(Boolean)
-      .join(" "),
-    source.email,
+  return (
+    built ||
+    sanitizeDisplayName(pickString(source.name, source.fullName)) ||
+    pickString(source.email)
   );
 }
 
@@ -157,52 +185,112 @@ export function mapAdminCourseSummaries(raw: unknown): AdminCourseSummary[] {
 export function mapAdminCatalogCourses(raw: unknown): AdminCatalogCourse[] {
   const data = asRecord(raw);
   const items = asArray<Record<string, unknown>>(
-    data.courses ?? data.items ?? (Array.isArray(raw) ? raw : []),
+    data.courses ?? data.items ?? data.data ?? (Array.isArray(raw) ? raw : []),
   );
 
-  return items
-    .map((item, index) => {
+  return items.flatMap((item, index) => {
       const id = pickId(item);
       const title = pickString(item.title, item.name);
-      if (!id || !title) return null;
+      if (!id || !title) return [];
 
-      const instructor = flattenPersonRecord({
-        ...asRecord(item.instructor ?? item.lecturer),
-        ...(typeof item.instructorId === "object" && item.instructorId
+      const instructorRaw =
+        typeof item.instructorId === "object" && item.instructorId
           ? asRecord(item.instructorId)
-          : {}),
-      });
+          : asRecord(item.instructor ?? item.lecturer);
+      const instructor = flattenPersonRecord(instructorRaw);
+      const allowedUniversities = asArray(item.allowedUniversities);
       const university = asRecord(
         item.university ??
           (typeof item.universityId === "object" && item.universityId
             ? item.universityId
             : null) ??
-          asArray(item.allowedUniversities)[0],
+          allowedUniversities[0],
       );
+      const universityIds = allowedUniversities
+        .map((entry) => {
+          if (typeof entry === "string") return entry;
+          return pickId(asRecord(entry));
+        })
+        .filter(Boolean);
       const studentsCount = pickNumber(item.studentsCount, item.enrolledCount, item.students);
-      const revenue = pickNumber(item.revenue, item.totalRevenue, item.metCost);
+      const revenue = pickNumber(
+        item.totalIncome,
+        item.revenue,
+        item.totalRevenue,
+        item.metCost,
+      );
+      const level = pickString(item.level) as AdminCatalogCourse["level"];
+      const rawThumbnail = pickString(item.thumbnail, item.image);
+      const thumbnail =
+        !rawThumbnail
+          ? "/images/programming.jpg"
+          : rawThumbnail.startsWith("/images/")
+            ? rawThumbnail
+            : resolveMediaUrl(rawThumbnail) || "/images/programming.jpg";
+      const rawAvatar = pickString(
+        instructor.avatar,
+        instructor.image,
+        instructor.photo,
+      );
+      const lecturerAvatar =
+        (rawAvatar
+          ? rawAvatar.startsWith("/images/")
+            ? rawAvatar
+            : resolveMediaUrl(rawAvatar)
+          : "") ||
+        COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length];
+      const instructorId =
+        pickId(instructor) ||
+        (typeof item.instructorId === "string" ? item.instructorId : "");
 
-      return {
+      const course: AdminCatalogCourse = {
         id,
         title,
-        category: pickString(item.level, item.category, item.description) || "دورة",
-        image: pickString(item.image, item.thumbnail) || "/images/programming.jpg",
+        category: pickString(item.level, item.category) || "دورة",
+        image: thumbnail,
         lecturer: fullName(instructor) || pickString(item.instructorName) || "محاضر",
-        lecturerAvatar:
-          pickString(instructor.avatar, instructor.image, instructor.photo) ||
-          COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length],
+        lecturerAvatar,
         university:
           pickString(
             university.name,
             item.universityName,
-            pickString(asRecord(asArray(item.allowedUniversities)[0]).name),
+            pickString(asRecord(allowedUniversities[0]).name),
           ) || "—",
         revenue: revenue ? formatCurrency(revenue) : "—",
         students: studentsCount ? `${studentsCount} طالب` : "—",
         status: mapCatalogStatus(pickString(item.status), item.isPublished !== false),
+        level:
+          level === "beginner" || level === "intermediate" || level === "advanced"
+            ? level
+            : "beginner",
+        metCost: pickNumber(item.metCost, item.price),
+        universityIds,
+        enrolledCount: studentsCount,
+        isPublished: item.isPublished !== false,
       };
-    })
-    .filter((course): course is AdminCatalogCourse => course !== null);
+
+      const description = pickString(item.description);
+      if (description) course.description = description;
+      if (instructorId) course.instructorId = instructorId;
+
+      return [course];
+    });
+}
+
+function formatJoinedDate(value: string): string {
+  if (!value || value === "—") return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ar-SA", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function formatMetAmount(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "—";
+  return `${value.toLocaleString("en-US")} MET`;
 }
 
 function mapAdminInstructorItem(
@@ -214,43 +302,95 @@ function mapAdminInstructorItem(
   const name = fullName(source);
   if (!id || !name) return null;
 
+  const assignedCourses = asArray<Record<string, unknown>>(
+    source.assignedCourses ?? item.assignedCourses,
+  );
+  const managedCourses = assignedCourses.map((course) => {
+    const enrolled = pickNumber(course.enrolledCount, course.students);
+    const income = pickNumber(course.totalIncome, course.metCost, course.price);
+    return {
+      id: pickId(course) || undefined,
+      name: pickString(course.title, course.name) || "مقرر",
+      enrolledCount: enrolled,
+      thumbnail: resolveMediaUrl(pickString(course.thumbnail, course.image)) || undefined,
+      metCost: pickNumber(course.metCost, course.price) || undefined,
+      revenue:
+        enrolled > 0
+          ? `${enrolled.toLocaleString("en-US")} طالب`
+          : income > 0
+            ? `${income.toLocaleString("en-US")} MET`
+            : "—",
+    };
+  });
+  const studentsFromCourses = managedCourses.reduce(
+    (sum, course) => sum + (course.enrolledCount ?? 0),
+    0,
+  );
+
   const earnings = pickNumber(
     source.earnings,
     source.totalEarnings,
     source.revenue,
+    source.totalEarnedMET,
     asRecord(source.finance).totalEarnings,
   );
   const available = pickNumber(
     source.availableBalance,
     source.balance,
     source.available,
+    source.totalReleasedMET,
     asRecord(source.finance).availableBalance,
   );
   const pending = pickNumber(
     source.pendingBalance,
     source.pending,
+    source.totalReservedMET,
     asRecord(source.finance).pendingBalance,
   );
 
   return {
     id,
     name,
+    firstName: pickString(source.firstName) || undefined,
+    secondName: pickString(source.secondName) || undefined,
+    familyName: pickString(source.familyName) || undefined,
+    email: pickString(source.email) || undefined,
     specialization: pickString(source.specialization, source.title, source.role, source.bio) || "مدرّس",
     coursesCount:
       pickNumber(source.coursesCount, source.courses, source.totalCourses) ||
-      asArray(source.assignedCourses).length,
-    earnings: earnings ? `$${earnings.toLocaleString("en-US")}` : "—",
-    status: mapLecturerStatus(pickString(source.status, source.accountStatus)),
+      managedCourses.length,
+    earnings: formatMetAmount(earnings),
+    status: mapLecturerStatus(
+      pickString(
+        source.status,
+        source.accountStatus,
+        asRecord(item.userId).isActive === false || source.isActive === false
+          ? "inactive"
+          : "active",
+      ),
+    ),
     avatar:
-      pickString(source.avatar, source.image, source.photo) ||
-      COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length],
+      resolveMediaUrl(
+        pickString(source.profileImage, source.avatar, source.image, source.photo),
+      ) || COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length],
     title: pickString(source.title, source.specialization) || "مدرّس",
-    joinedDate: pickString(source.createdAt, source.joinedAt, source.registeredAt) || "—",
-    studentsCount: String(pickNumber(source.studentsCount, source.students) || 0),
-    managedCourses: [],
-    totalProfit: earnings ? `$${earnings.toLocaleString("en-US")}` : "—",
-    availableBalance: available ? `$${available.toLocaleString("en-US")}` : "—",
-    pendingBalance: pending ? `$${pending.toLocaleString("en-US")}` : "—",
+    joinedDate: formatJoinedDate(
+      pickString(source.createdAt, source.joinedAt, source.registeredAt) || "—",
+    ),
+    studentsCount: String(
+      pickNumber(source.studentsCount, source.students) || studentsFromCourses,
+    ),
+    phoneNumber: pickString(source.phoneNumber, source.phone) || undefined,
+    dateOfBirth: pickString(source.dateOfBirth) || undefined,
+    paypalAccount: pickString(source.paypalAccount) || undefined,
+    bio: pickString(source.bio) || undefined,
+    isActive: source.isActive !== false,
+    createdAt: pickString(source.createdAt) || undefined,
+    managedCourses,
+    totalProfit: formatMetAmount(earnings),
+    availableBalance: formatMetAmount(available),
+    pendingBalance: formatMetAmount(pending),
+    userId: pickId(asRecord(item.userId ?? item.user)) || id,
   };
 }
 
@@ -260,10 +400,18 @@ export function mapAdminInstructor(raw: unknown): AdminLecturer | null {
   const instructor = asRecord(data.instructor);
 
   if (pickId(instructor) || pickId(user)) {
+    const nestedUser = asRecord(instructor.userId ?? instructor.user);
+    const resolvedUser = pickId(user) ? user : nestedUser;
     return mapAdminInstructorItem(
       {
+        ...resolvedUser,
         ...instructor,
-        userId: user,
+        email: pickString(
+          instructor.email,
+          resolvedUser.email,
+          user.email,
+        ),
+        userId: resolvedUser,
       },
       0,
     );
@@ -301,19 +449,29 @@ export function mapAdminStudents(raw: unknown): AdminStudent[] {
 
       const university = asRecord(source.university ?? source.universityId);
       const metBalance = pickNumber(source.metBalance, source.metPoints, source.balance);
-      const enrolled = asArray(source.enrolledCourses);
+      const enrolled = asArray<Record<string, unknown>>(source.enrolledCourses);
       const coursesCount =
         pickNumber(source.coursesCount, source.enrolledCoursesCount) || enrolled.length;
 
       return {
         id,
+        userId: pickId(asRecord(item.userId ?? item.user)) || id,
         name,
+        firstName: pickString(source.firstName) || undefined,
+        secondName: pickString(source.secondName) || undefined,
+        familyName: pickString(source.familyName) || undefined,
         email: email || "—",
         avatar:
-          pickString(source.avatar, source.image) ||
-          COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length],
+          resolveMediaUrl(
+            pickString(source.profileImage, source.avatar, source.image, source.photo),
+          ) || COMMUNITY_USER_AVATARS[index % COMMUNITY_USER_AVATARS.length],
         coursesCount: coursesCount || 0,
         totalPaid: metBalance ? `${metBalance} MET` : "—",
+        metPoints: metBalance || undefined,
+        universityId: pickId(university) || undefined,
+        universityName: pickString(university.name) || undefined,
+        isActive: source.isActive !== false,
+        createdAt: pickString(source.createdAt, item.createdAt) || undefined,
         paymentNote: metBalance ? "رصيد MET متاح" : "لا توجد بيانات دفع",
         paymentNoteTone: "neutral" as const,
         paymentStatus: "paid" as const,
@@ -322,7 +480,20 @@ export function mapAdminStudents(raw: unknown): AdminStudent[] {
         yearTag: pickString(source.year, source.level) || "طالب",
         gpa: pickString(source.gpa) || "—",
         attendance: pickString(source.attendance) || "—",
-        enrolledCourses: [],
+        enrolledCourses: enrolled.map((course, courseIndex) => {
+          const isIdOnly = typeof course === "string";
+          const courseRecord = asRecord(course);
+          const id = isIdOnly ? course : pickId(courseRecord) || undefined;
+          const title =
+            pickString(courseRecord.title, courseRecord.name) ||
+            (isIdOnly ? "" : `مقرر ${courseIndex + 1}`);
+          return {
+            id,
+            name: title || id || `مقرر ${courseIndex + 1}`,
+            progress: pickNumber(courseRecord.progress, courseRecord.progressPercent),
+            tone: "orange" as const,
+          };
+        }),
         recentActivities: [],
         metTransactions: mapStudentMetTransactions(item),
       };

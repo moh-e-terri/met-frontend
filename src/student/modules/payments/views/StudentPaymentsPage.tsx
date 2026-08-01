@@ -12,12 +12,9 @@ import {
 import { fetchMetHistory, metHistoryQueryKeys } from "@/student/api/metHistory";
 import { myCoursesQueryKeys } from "@/student/api/myCourses";
 import { studentQueryKeys } from "@/student/api/queryKeys";
-import type { PaymentMethodId } from "../data/mockPayments";
 import { OrderSummarySidebar } from "../components/OrderSummarySidebar";
-import { PaymentCardForm } from "../components/PaymentCardForm";
 import { PaymentHistorySection } from "../components/PaymentHistorySection";
-import { PaymentMethodSelector } from "../components/PaymentMethodSelector";
-import { PaymentPageHeader } from "../components/PaymentPageHeader";
+import { WalletBalanceCard } from "../components/WalletBalanceCard";
 import { buildPaymentOrderSummary } from "../types";
 
 export const StudentPaymentsPage = () => {
@@ -27,7 +24,6 @@ export const StudentPaymentsPage = () => {
   const { session } = useAuth();
   const [searchParams] = useSearchParams();
   const courseId = searchParams.get("courseId") ?? "";
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId>("paypal");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const courseFromState = (location.state as { course?: AvailableCourse } | null)?.course;
@@ -65,6 +61,7 @@ export const StudentPaymentsPage = () => {
         queryClient.invalidateQueries({ queryKey: ["student", "courses", "available"] }),
         queryClient.invalidateQueries({ queryKey: metHistoryQueryKeys.all(session?.userId) }),
         queryClient.invalidateQueries({ queryKey: ["student", "courses", courseId] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }),
       ]);
       navigate(`/student/my-courses/${courseId}`, {
         replace: true,
@@ -84,36 +81,18 @@ export const StudentPaymentsPage = () => {
     enrollMutation.mutate();
   };
 
-  if (courseId && !order) {
-    return (
-      <PageMotion className="mx-auto w-full max-w-[1120px] space-y-6">
-        <PaymentPageHeader />
-        <div
-          className="rounded-3xl border border-dashed border-[#e2e8f0] bg-white px-6 py-12 text-center"
-          dir="rtl"
-        >
-          <p className="text-sm text-[#64748b]">
-            لم نجد تفاصيل المقرر المطلوب. ارجع لصفحة المقررات واختر الاشتراك من جديد.
-          </p>
-          <Link
-            to="/student/catalog"
-            className="mt-4 inline-block rounded-2xl bg-[#f5a524] px-5 py-2.5 text-sm font-bold text-white"
-          >
-            استكشاف المقررات
-          </Link>
-        </div>
-        <PaymentHistorySection
-          transactions={metHistoryQuery.data?.transactions ?? []}
-          currentMet={metHistoryQuery.data?.currentMet}
-          isLoading={metHistoryQuery.isLoading}
-        />
-      </PageMotion>
-    );
-  }
+  const currentMet = metHistoryQuery.data?.currentMet ?? 0;
+  const shortfall =
+    order && currentMet < order.metCost ? order.metCost - currentMet : 0;
 
   return (
-    <PageMotion className="mx-auto w-full max-w-[1120px] space-y-6 sm:space-y-8">
-      <PaymentPageHeader courseTitle={order?.courseTitle} />
+    <PageMotion className="mx-auto w-full max-w-[900px] space-y-6 sm:space-y-8">
+      <header className="text-right" dir="rtl">
+        <h1 className="text-2xl font-black text-[#0f172a] sm:text-3xl">محفظتي</h1>
+        <p className="mt-2 text-sm text-[#64748b]">
+          تابع رصيد نقاط MET وسجل عمليات الشحن والخصم والاسترداد.
+        </p>
+      </header>
 
       {metHistoryQuery.isError ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-right text-sm text-red-600">
@@ -123,37 +102,66 @@ export const StudentPaymentsPage = () => {
         </div>
       ) : null}
 
-      <PaymentMethodSelector selected={selectedMethod} onSelect={setSelectedMethod} />
+      <WalletBalanceCard
+        currentMet={metHistoryQuery.data?.currentMet}
+        currentUsd={metHistoryQuery.data?.currentUsd}
+        isLoading={metHistoryQuery.isLoading}
+      />
 
-      <div
-        className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]"
-        dir="ltr"
-      >
-        <div className="order-2 lg:order-1 lg:row-start-1">
+      {courseId ? (
+        <section className="space-y-4" dir="rtl">
+          <h2 className="text-lg font-bold text-[#0f172a]">إتمام الاشتراك</h2>
           {order ? (
-            <OrderSummarySidebar
-              order={order}
-              isProcessing={enrollMutation.isPending}
-              errorMessage={errorMessage}
-              onCompletePayment={handleCompletePayment}
-            />
+            <>
+              {shortfall > 0 ? (
+                <div className="rounded-2xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-sm text-[#92400e]">
+                  <p>
+                    رصيدك:{" "}
+                    <span className="font-bold" dir="ltr">
+                      {currentMet} MET
+                    </span>
+                  </p>
+                  <p className="mt-1">
+                    سعر الكورس:{" "}
+                    <span className="font-bold" dir="ltr">
+                      {order.metCost} MET
+                    </span>
+                  </p>
+                  <p className="mt-1">
+                    ينقصك:{" "}
+                    <span className="font-bold" dir="ltr">
+                      {shortfall} MET
+                    </span>
+                  </p>
+                </div>
+              ) : null}
+              <OrderSummarySidebar
+                order={order}
+                isProcessing={enrollMutation.isPending}
+                errorMessage={errorMessage}
+                onCompletePayment={handleCompletePayment}
+                disabled={shortfall > 0}
+                disabledLabel="رصيدك غير كافٍ"
+              />
+            </>
           ) : (
-            <aside className="rounded-3xl border border-[#e2e8f0] bg-white p-5 text-right text-sm text-[#64748b] shadow-sm">
-              لا يوجد مقرر محدد للدفع حالياً. يمكنك شحن رصيد MET من هنا.
-            </aside>
+            <div className="rounded-3xl border border-dashed border-[#e2e8f0] bg-white px-6 py-10 text-center">
+              <p className="text-sm text-[#64748b]">
+                لم نجد تفاصيل المقرر المطلوب. ارجع لصفحة المقررات واختر الاشتراك من جديد.
+              </p>
+              <Link
+                to="/student/catalog"
+                className="mt-4 inline-block rounded-2xl bg-[#f5a524] px-5 py-2.5 text-sm font-bold text-white"
+              >
+                استكشاف المقررات
+              </Link>
+            </div>
           )}
-        </div>
-        <div className="order-1 min-w-0 lg:order-2 lg:row-start-1">
-          <PaymentCardForm
-            isProcessing={enrollMutation.isPending}
-            onSubmit={handleCompletePayment}
-          />
-        </div>
-      </div>
+        </section>
+      ) : null}
 
       <PaymentHistorySection
         transactions={metHistoryQuery.data?.transactions ?? []}
-        currentMet={metHistoryQuery.data?.currentMet}
         isLoading={metHistoryQuery.isLoading}
       />
     </PageMotion>

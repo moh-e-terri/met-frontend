@@ -24,6 +24,10 @@ export interface AuthSession {
   universityId?: string;
   universityName?: string;
   metBalance?: number;
+  avatar?: string;
+  firstName?: string;
+  secondName?: string;
+  familyName?: string;
 }
 
 export interface AuthSignUpPayload {

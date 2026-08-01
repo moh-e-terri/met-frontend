@@ -29,9 +29,9 @@ export const ChatWindow = ({
   };
 
   return (
-    <section className="flex min-h-[520px] min-w-0 flex-1 flex-col border-[#e2e8f0] xl:border-l">
+    <section className="flex h-full min-h-[480px] min-w-0 flex-col border-[#e2e8f0] xl:min-h-0 xl:border-l">
       <header
-        className="flex items-center justify-between gap-3 border-b border-[#e2e8f0] px-4 py-3"
+        className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e2e8f0] px-4 py-3"
         dir="rtl"
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -85,7 +85,7 @@ export const ChatWindow = ({
         </div>
       </header>
 
-      <div className="flex-1 space-y-4 overflow-y-auto bg-[#f8fafc] p-4" dir="rtl">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-[#f8fafc] p-4" dir="rtl">
         {isLoadingMessages ? (
           <div className="space-y-4">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -96,7 +96,7 @@ export const ChatWindow = ({
             ))}
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex h-full min-h-[280px] items-center justify-center">
+          <div className="flex h-full min-h-[200px] items-center justify-center">
             <p className="text-sm text-[#64748b]">ابدأ المحادثة بإرسال رسالة.</p>
           </div>
         ) : (
@@ -160,7 +160,7 @@ export const ChatWindow = ({
         )}
       </div>
 
-      <form className="border-t border-[#e2e8f0] p-4" onSubmit={handleSubmit}>
+      <form className="shrink-0 border-t border-[#e2e8f0] p-4" onSubmit={handleSubmit}>
         <div className="flex items-center gap-3" dir="ltr">
           <button
             type="submit"

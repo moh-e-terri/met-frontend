@@ -7,9 +7,6 @@ import {
   fetchCommunityPosts,
   type CommunityPostView,
 } from "@/core/api/community";
-import {
-  filterPostsByCourseTag,
-} from "@/shared/utils/communityInsights";
 
 interface CourseDiscussionsProps {
   courseId: string;
@@ -19,17 +16,15 @@ interface CourseDiscussionsProps {
 export const CourseDiscussions = ({ courseId, courseTitle }: CourseDiscussionsProps) => {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
-  const courseTag = `course:${courseId}`;
 
   const postsQuery = useQuery({
-    queryKey: [...communityQueryKeys.posts(50), "course", courseId],
-    queryFn: () => fetchCommunityPosts({ limit: 50 }),
-    select: (posts) => filterPostsByCourseTag(posts, courseId),
+    queryKey: communityQueryKeys.posts(50, 1, "anon", courseId),
+    queryFn: () => fetchCommunityPosts({ limit: 50, courseId }),
   });
 
   const createMutation = useMutation({
     mutationFn: (content: string) =>
-      createCommunityPost(`[${courseTitle ?? "مقرر"}] ${content}`, { tag: courseTag }),
+      createCommunityPost({ content, courseId }),
     onSuccess: async () => {
       setDraft("");
       await queryClient.invalidateQueries({ queryKey: ["community", "posts"] });
@@ -45,6 +40,9 @@ export const CourseDiscussions = ({ courseId, courseTitle }: CourseDiscussionsPr
     >
       <h2 className="mb-5 text-right text-lg font-bold text-[#0f172a]">
         نقاشات المقرر ({posts.length})
+        {courseTitle ? (
+          <span className="mr-2 text-sm font-semibold text-[#64748b]">· {courseTitle}</span>
+        ) : null}
       </h2>
 
       <div className="mb-6 flex items-start gap-3">
@@ -78,29 +76,31 @@ export const CourseDiscussions = ({ courseId, courseTitle }: CourseDiscussionsPr
       {postsQuery.isLoading ? (
         <div className="h-32 animate-pulse rounded-2xl bg-[#f8fafc]" />
       ) : posts.length === 0 ? (
-        <p className="text-right text-sm text-[#64748b]">
-          لا توجد نقاشات لهذا المقرر بعد. كن أول من يطرح سؤالاً.
+        <p className="py-8 text-center text-sm text-[#64748b]">
+          لا توجد نقاشات على هذا المقرر بعد.
         </p>
       ) : (
-        <div className="space-y-4">
-          {posts.map((comment: CommunityPostView) => (
-            <article key={comment.id} className="border-t border-[#f1f5f9] pt-4">
-              <header className="mb-2 flex items-start justify-between gap-2" dir="rtl">
-                <div className="flex min-w-0 items-center gap-3">
-                  <img
-                    src={comment.avatar}
-                    alt=""
-                    className="size-10 shrink-0 rounded-full"
-                    aria-hidden
-                  />
-                  <p className="text-sm font-bold text-[#0f172a]">{comment.author}</p>
+        <ul className="space-y-4">
+          {posts.map((post: CommunityPostView) => (
+            <li
+              key={post.id}
+              className="rounded-2xl border border-[#f1f5f9] bg-[#f8fafc] px-4 py-3 text-right"
+            >
+              <div className="mb-2 flex items-center justify-end gap-2">
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">{post.author}</p>
+                  <p className="text-[11px] text-[#94a3b8]">{post.time}</p>
                 </div>
-                <span className="shrink-0 text-xs text-[#94a3b8]">{comment.time}</span>
-              </header>
-              <p className="text-right text-sm leading-6 text-[#475569]">{comment.content}</p>
-            </article>
+                <img
+                  src={post.avatar || STUDENT_DEFAULT_AVATAR}
+                  alt=""
+                  className="size-9 rounded-full object-cover"
+                />
+              </div>
+              <p className="text-sm leading-6 text-[#475569]">{post.content}</p>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </section>
   );

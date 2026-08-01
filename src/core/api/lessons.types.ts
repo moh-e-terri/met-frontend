@@ -20,6 +20,15 @@ export interface CreateLessonPayload {
   isPublished?: boolean;
 }
 
+export interface UpdateLessonPayload {
+  title?: string;
+  videoFile?: File;
+  duration?: number;
+  order?: number;
+  isPublished?: boolean;
+  description?: string;
+}
+
 export function formatLessonDuration(seconds?: number): string {
   if (!seconds || seconds <= 0) return "—";
   const minutes = Math.round(seconds / 60);

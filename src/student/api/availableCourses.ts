@@ -1,5 +1,9 @@
 import { apiClient, type ApiEnvelope } from "@/core/api/client";
 import {
+  fillMissingUniversityNames,
+  resolveCourseUniversityFields,
+} from "@/core/api/courseUniversity";
+import {
   asArray,
   asRecord,
   extractApiList,
@@ -18,8 +22,12 @@ export interface AvailableCourse {
   image: string;
   instructor?: string;
   category?: string;
+  university?: string;
+  universityId?: string;
   level?: CourseLevel;
   metCost: number;
+  /** Ready-to-display price label from API or formatted locally */
+  metCostDisplay: string;
   canAfford: boolean;
   isEnrolled: boolean;
   lessonsCount?: number;
@@ -92,8 +100,13 @@ function mapAvailableCourse(raw: Record<string, unknown>, index: number): Availa
   if (!id || !title) return null;
 
   const level = pickString(raw.level, raw.difficulty) as CourseLevel | "";
+  const metCost = pickNumber(raw.metCost, raw.price, raw.cost, raw.metPoints);
+  const metCostDisplay =
+    pickString(raw.metCostDisplay, raw.priceDisplay, raw.costLabel) ||
+    `${metCost.toLocaleString("en-US")} MET`;
+  const { university, universityId } = resolveCourseUniversityFields(raw);
 
-  return {
+  const mapped: AvailableCourse = {
     id,
     title,
     description:
@@ -103,9 +116,10 @@ function mapAvailableCourse(raw: Record<string, unknown>, index: number): Availa
       pickString(raw.thumbnail, raw.image, raw.coverImage, raw.banner) ||
       COURSE_IMAGES[index % COURSE_IMAGES.length],
     instructor: mapInstructorName(raw),
-    category: pickString(raw.category, raw.track, raw.field),
+    category: pickString(raw.category, raw.track, raw.field) || undefined,
     level: level === "beginner" || level === "intermediate" || level === "advanced" ? level : undefined,
-    metCost: pickNumber(raw.metCost, raw.price, raw.cost, raw.metPoints),
+    metCost,
+    metCostDisplay,
     canAfford: raw.canAfford !== false,
     isEnrolled: Boolean(raw.isEnrolled ?? raw.enrolled ?? raw.isRegistered),
     lessonsCount:
@@ -114,6 +128,9 @@ function mapAvailableCourse(raw: Record<string, unknown>, index: number): Availa
       undefined,
     studentsCount: pickNumber(raw.studentsCount, raw.enrolledCount, raw.students) || undefined,
   };
+  if (university) mapped.university = university;
+  if (universityId) mapped.universityId = universityId;
+  return mapped;
 }
 
 function mapPagination(raw: Record<string, unknown>, fallbackLimit: number) {
@@ -156,9 +173,11 @@ export async function fetchAvailableCourses(
   const payload = envelope.data ?? envelope;
   const pagination = mapPagination(envelope, limit);
   const paginationRecord = asRecord(envelope.pagination);
-  const courses = extractApiList(payload, ["courses", "availableCourses", "items"])
-    .map(mapAvailableCourse)
-    .filter((course): course is AvailableCourse => course !== null);
+  const courses = await fillMissingUniversityNames(
+    extractApiList(payload, ["courses", "availableCourses", "items"])
+      .map(mapAvailableCourse)
+      .filter((course): course is AvailableCourse => course !== null),
+  );
 
   return {
     courses,
@@ -191,9 +210,16 @@ export async function enrollInCourse(courseId: string): Promise<EnrollCourseResu
   };
 }
 
-export async function dropCourse(courseId: string): Promise<DropCourseResult> {
+export async function dropCourse(
+  courseId: string,
+  options?: { confirm?: boolean },
+): Promise<DropCourseResult> {
   const response = await apiClient.delete<ApiEnvelope<Record<string, unknown>>>(
     `/student/courses/${courseId}/drop`,
+    {
+      params: options?.confirm ? { confirm: true } : undefined,
+      data: options?.confirm ? { confirm: true } : undefined,
+    },
   );
   const data = asRecord(response.data.data);
 

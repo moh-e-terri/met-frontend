@@ -1,11 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/core/auth/AuthContext";
 import {
+  applyLocalSubmissionState,
   assignmentQueryKeys,
   buildAssignmentStats,
+  extractSubmissionFromSubmitResponse,
   fetchCourseAssignments,
+  saveLocalAssignmentSubmission,
   submitCourseAssignment,
+  type SubmitAssignmentPayload,
 } from "@/core/api/assignments";
 import { PageMotion } from "@/shared/motion";
 import { myCoursesQueryKeys } from "@/student/api/myCourses";
@@ -14,20 +19,14 @@ import { CoursePageFooter } from "../../courses/components/CoursePageFooter";
 import { AssignmentsGrid } from "../components/AssignmentsGrid";
 import { AssignmentsPageHeader } from "../components/AssignmentsPageHeader";
 
-function buildSubmitPayload(textAnswer: string) {
-  const isUrl = /^https?:\/\//i.test(textAnswer);
-  return {
-    submissionType: isUrl ? ("pdf" as const) : ("text" as const),
-    textAnswer: isUrl ? undefined : textAnswer,
-    fileUrl: isUrl ? textAnswer : undefined,
-  };
-}
-
 export const StudentAssignmentsPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const userId = session?.userId || "";
   const { courseId = "" } = useParams<{ courseId: string }>();
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [localTick, setLocalTick] = useState(0);
 
   const assignmentsQuery = useQuery({
     queryKey: assignmentQueryKeys.list(courseId),
@@ -35,16 +34,38 @@ export const StudentAssignmentsPage = () => {
     enabled: Boolean(courseId),
   });
 
+  const assignments = useMemo(
+    () => applyLocalSubmissionState(assignmentsQuery.data ?? [], userId),
+    [assignmentsQuery.data, userId, localTick],
+  );
+
   const submitMutation = useMutation({
     mutationFn: async ({
       assignmentId,
-      textAnswer,
+      payload,
+      fileName,
     }: {
       assignmentId: string;
-      textAnswer: string;
+      payload: SubmitAssignmentPayload;
+      fileName?: string;
     }) => {
       setSubmittingId(assignmentId);
-      await submitCourseAssignment(courseId, assignmentId, buildSubmitPayload(textAnswer));
+      const data = await submitCourseAssignment(courseId, assignmentId, payload);
+      const extracted = extractSubmissionFromSubmitResponse(data);
+      if (userId) {
+        saveLocalAssignmentSubmission(userId, {
+          assignmentId,
+          submissionId: extracted.submissionId,
+          submittedAt: extracted.submittedAt || new Date().toISOString(),
+          submissionType: payload.submissionType,
+          fileName,
+          textAnswer: payload.textAnswer,
+          score: extracted.score,
+          feedback: extracted.feedback,
+          attemptsUsed: 1,
+        });
+        setLocalTick((value) => value + 1);
+      }
     },
     onSuccess: async () => {
       await Promise.all([
@@ -96,7 +117,6 @@ export const StudentAssignmentsPage = () => {
     );
   }
 
-  const assignments = assignmentsQuery.data ?? [];
   const stats = buildAssignmentStats(assignments);
 
   return (
@@ -127,8 +147,12 @@ export const StudentAssignmentsPage = () => {
         <AssignmentsGrid
           assignments={assignments}
           submittingId={submittingId}
-          onSubmit={(assignmentId, textAnswer) =>
-            submitMutation.mutateAsync({ assignmentId, textAnswer })
+          onSubmit={(assignmentId, payload, meta) =>
+            submitMutation.mutateAsync({
+              assignmentId,
+              payload,
+              fileName: meta?.fileName,
+            })
           }
         />
       )}

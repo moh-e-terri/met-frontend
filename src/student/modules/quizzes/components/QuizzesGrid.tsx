@@ -3,15 +3,13 @@ import { QuizCard } from "./QuizCard";
 
 interface QuizzesGridProps {
   quizzes: CourseExam[];
-  onSubmit?: (exam: CourseExam, writtenAnswer: string) => void | Promise<unknown>;
-  onViewResult?: (exam: CourseExam) => void | Promise<void>;
+  courseId: string;
   loadingExamId?: string | null;
 }
 
 export const QuizzesGrid = ({
   quizzes,
-  onSubmit,
-  onViewResult,
+  courseId,
   loadingExamId,
 }: QuizzesGridProps) => {
   return (
@@ -23,8 +21,7 @@ export const QuizzesGrid = ({
         <QuizCard
           key={quiz.id}
           quiz={quiz}
-          onSubmit={onSubmit}
-          onViewResult={onViewResult}
+          courseId={courseId}
           isLoading={loadingExamId === quiz.id}
         />
       ))}

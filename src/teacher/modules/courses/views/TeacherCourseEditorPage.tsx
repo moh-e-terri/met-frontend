@@ -1,21 +1,32 @@
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { getTeacherBasePath } from "@/core/routing/appSurface";
 import { PageMotion } from "@/shared/motion";
 import { fetchCourseLessons, lessonQueryKeys } from "@/core/api/lessons";
-import { courseStudentsQueryKeys, fetchCourseStudents, fetchInstructorDashboard, teacherQueryKeys } from "@/teacher/api";
+import { CoursePlaylistPlayer } from "@/shared/modules/course-workspace";
+import {
+  courseStudentsQueryKeys,
+  fetchCourseStudents,
+  fetchInstructorDashboard,
+  teacherQueryKeys,
+} from "@/teacher/api";
 import {
   CourseCurriculumSection,
   mapToCurriculumLessons,
 } from "../components/CourseCurriculumSection";
 import { CourseAssignmentsSection } from "../components/CourseAssignmentsSection";
+import { CourseDataBanner } from "../components/CourseDataBanner";
 import { CourseExamsSection } from "../components/CourseExamsSection";
-import { CourseDetailsForm } from "../components/CourseDetailsForm";
 import { CourseEditorSidebar } from "../components/CourseEditorSidebar";
 import { CourseStudentsSection } from "../components/CourseStudentsSection";
+import { TeacherNewCoursePanel } from "../components/TeacherNewCoursePanel";
 
 export const TeacherCourseEditorPage = () => {
   const { courseId = "new" } = useParams<{ courseId: string }>();
+  const basePath = getTeacherBasePath();
   const isExistingCourse = courseId !== "new";
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
 
   const dashboardQuery = useQuery({
     queryKey: teacherQueryKeys.dashboard,
@@ -34,46 +45,46 @@ export const TeacherCourseEditorPage = () => {
     enabled: isExistingCourse,
   });
 
-  const assignedCourse = dashboardQuery.data?.courses.find((course) => course.id === courseId);
-  const lessons = isExistingCourse ? mapToCurriculumLessons(lessonsQuery.data ?? []) : [];
+  const assignedCourse = dashboardQuery.data?.courses.find(
+    (course) => course.id === courseId,
+  );
+  const apiLessons = lessonsQuery.data ?? [];
+  const lessons = isExistingCourse ? mapToCurriculumLessons(apiLessons) : [];
+  const courseTitle = assignedCourse?.title ?? "المقرر";
+  const studentsCount =
+    studentsQuery.data?.length != null
+      ? String(studentsQuery.data.length)
+      : assignedCourse?.students;
 
-  const form = {
-    title: assignedCourse?.title ?? "",
-    description: "يتم إدارة بيانات المقرر الأساسية من لوحة الإدارة.",
-    category: "برمجة",
-    level: "intermediate" as const,
-    price: "—",
-    tags: "",
-  };
+  useEffect(() => {
+    if (!selectedLessonId && apiLessons[0]?.id) {
+      setSelectedLessonId(apiLessons[0].id);
+    }
+  }, [apiLessons, selectedLessonId]);
 
   return (
     <PageMotion className="mx-auto w-full max-w-[1280px]">
       <div
-        className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)]"
+        className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[280px_minmax(0,1fr)]"
         dir="ltr"
       >
         <aside className="order-2 xl:order-1 xl:row-start-1">
-          <CourseEditorSidebar courses={dashboardQuery.data?.courses ?? []} />
+          <CourseEditorSidebar
+            courses={dashboardQuery.data?.courses ?? []}
+            hideCourses={!isExistingCourse}
+            communityTo={
+              isExistingCourse ? `${basePath}/courses/${courseId}/community` : null
+            }
+            communityTitle={courseTitle}
+          />
         </aside>
 
         <div className="order-1 min-w-0 space-y-6 xl:order-2 xl:row-start-1">
           {!isExistingCourse ? (
-            <section
-              className="rounded-3xl border border-[#fde8c8] bg-[#fff7ed] px-5 py-6 text-right shadow-sm"
-              dir="rtl"
-            >
-              <h2 className="text-lg font-bold text-[#0f172a]">إنشاء مقرر جديد</h2>
-              <p className="mt-2 text-sm leading-7 text-[#64748b]">
-                يتم إنشاء المقررات وإسنادها للمدرّسين من لوحة الإدارة. بعد الإسناد ستظهر
-                المقررات هنا ويمكنك إضافة الدروس والواجبات والاختبارات.
-              </p>
-              <Link
-                to="/teacher"
-                className="mt-4 inline-flex rounded-2xl bg-[#f5a524] px-5 py-2.5 text-sm font-bold text-white"
-              >
-                العودة للوحة التحكم
-              </Link>
-            </section>
+            <TeacherNewCoursePanel
+              courses={dashboardQuery.data?.courses ?? []}
+              isLoading={dashboardQuery.isLoading}
+            />
           ) : null}
 
           {lessonsQuery.isError ? (
@@ -94,10 +105,29 @@ export const TeacherCourseEditorPage = () => {
 
           {isExistingCourse ? (
             <>
-              <CourseDetailsForm form={form} readOnly />
+              <CourseDataBanner
+                title={courseTitle}
+                image={assignedCourse?.image}
+                university={assignedCourse?.university}
+                students={studentsCount}
+                lessons={
+                  assignedCourse?.lessons ??
+                  (apiLessons.length > 0 ? String(apiLessons.length) : undefined)
+                }
+              />
+
+              <CoursePlaylistPlayer
+                lessons={apiLessons}
+                selectedLessonId={selectedLessonId}
+                onSelectLesson={setSelectedLessonId}
+                isLoading={lessonsQuery.isLoading}
+              />
+
               <CourseStudentsSection
                 students={studentsQuery.data ?? []}
                 isLoading={studentsQuery.isLoading}
+                courseId={courseId}
+                studentProfileBasePath={`${basePath}/students`}
               />
 
               {lessonsQuery.isLoading ? (
@@ -106,8 +136,10 @@ export const TeacherCourseEditorPage = () => {
                 <CourseCurriculumSection courseId={courseId} lessons={lessons} />
               )}
 
-              <CourseAssignmentsSection courseId={courseId} />
-              <CourseExamsSection courseId={courseId} />
+              <div className="grid gap-6 lg:grid-cols-2">
+                <CourseAssignmentsSection courseId={courseId} />
+                <CourseExamsSection courseId={courseId} />
+              </div>
             </>
           ) : null}
         </div>

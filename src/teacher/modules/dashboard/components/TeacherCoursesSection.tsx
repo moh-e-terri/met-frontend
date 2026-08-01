@@ -51,9 +51,16 @@ export const TeacherCoursesSection = ({ courses = [], isLoading }: TeacherCourse
               </div>
 
               <div className="space-y-4 p-5">
-                <h3 className="min-h-14 text-right text-lg font-bold leading-snug text-[#0f172a]">
-                  {course.title}
-                </h3>
+                <div className="text-right">
+                  <h3 className="min-h-14 text-lg font-bold leading-snug text-[#0f172a]">
+                    {course.title}
+                  </h3>
+                  {course.university ? (
+                    <p className="mt-1 text-sm font-semibold text-[#f5a524]">
+                      {course.university}
+                    </p>
+                  ) : null}
+                </div>
 
                 <div className="flex items-center justify-start gap-4 text-sm text-[#64748b]">
                   <span className="inline-flex items-center gap-1.5">

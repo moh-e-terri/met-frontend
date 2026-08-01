@@ -18,6 +18,7 @@ export type AdminCourseStatus = "published" | "draft";
 export interface AdminCatalogCourse {
   id: string;
   title: string;
+  description?: string;
   category: string;
   image: string;
   lecturer: string;
@@ -26,7 +27,29 @@ export interface AdminCatalogCourse {
   revenue: string;
   students: string;
   status: AdminCourseStatus;
+  level?: "beginner" | "intermediate" | "advanced";
+  metCost?: number;
+  instructorId?: string;
+  universityIds?: string[];
+  enrolledCount?: number;
+  isPublished?: boolean;
 }
+
+export const COURSE_IMAGE_PRESETS = [
+  "/images/programming.jpg",
+  "/images/CyberSecurity.jpg",
+  "/images/web.jpg",
+  "/images/CS.jpg",
+] as const;
+
+export const courseLevelLabels: Record<
+  NonNullable<AdminCatalogCourse["level"]>,
+  string
+> = {
+  beginner: "مبتدئ",
+  intermediate: "متوسط",
+  advanced: "متقدم",
+};
 
 export const adminCatalogCourses: AdminCatalogCourse[] = [
   {

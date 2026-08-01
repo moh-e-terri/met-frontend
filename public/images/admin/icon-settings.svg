@@ -1,4 +1,9 @@
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
-  <path d="M10 2.5V4.5M10 15.5V17.5M17.5 10H15.5M4.5 10H2.5M15.1 4.9L13.7 6.3M6.3 13.7L4.9 15.1M15.1 15.1L13.7 13.7M6.3 6.3L4.9 4.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <path
+    d="M8.08 1.85a2.1 2.1 0 0 1 3.84 0l.18.45a1.4 1.4 0 0 0 1.66.86l.47-.14a2.1 2.1 0 0 1 2.55 2.55l-.14.47a1.4 1.4 0 0 0 .86 1.66l.45.18a2.1 2.1 0 0 1 0 3.84l-.45.18a1.4 1.4 0 0 0-.86 1.66l.14.47a2.1 2.1 0 0 1-2.55 2.55l-.47-.14a1.4 1.4 0 0 0-1.66.86l-.18.45a2.1 2.1 0 0 1-3.84 0l-.18-.45a1.4 1.4 0 0 0-1.66-.86l-.47.14a2.1 2.1 0 0 1-2.55-2.55l.14-.47a1.4 1.4 0 0 0-.86-1.66l-.45-.18a2.1 2.1 0 0 1 0-3.84l.45-.18a1.4 1.4 0 0 0 .86-1.66l-.14-.47a2.1 2.1 0 0 1 2.55-2.55l.47.14a1.4 1.4 0 0 0 1.66-.86l.18-.45Z"
+    stroke="currentColor"
+    stroke-width="1.35"
+    stroke-linejoin="round"
+  />
+  <circle cx="10" cy="10" r="2.55" stroke="currentColor" stroke-width="1.35" />
 </svg>

@@ -1,8 +1,9 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "@/shared/utils/cn";
-import { initialNotifications, type StudentNotification } from "@/student/data/notifications";
+import type { AppNotification } from "@/core/api/notifications";
 import { NotificationsPanel } from "@/student/components/NotificationsPanel";
+import { NotificationToast } from "@/shared/components/NotificationToast";
 import { DashboardIcon } from "./DashboardIcon";
 
 interface DashboardHeaderProps {
@@ -16,9 +17,16 @@ interface DashboardHeaderProps {
   navbarZIndex: number;
   centerContent?: ReactNode;
   messagesTo?: string;
-  notifications?: StudentNotification[];
+  /** When set, avatar + name navigate to the account profile/settings page */
+  profileTo?: string;
+  notifications?: AppNotification[];
+  unreadCount?: number;
   onMarkAllRead?: () => void;
   onMarkRead?: (id: string) => void;
+  isNotificationsLoading?: boolean;
+  toast?: AppNotification | null;
+  onOpenToast?: () => void;
+  onDismissToast?: () => void;
 }
 
 export const DashboardHeader = ({
@@ -32,43 +40,42 @@ export const DashboardHeader = ({
   navbarZIndex,
   centerContent,
   messagesTo,
-  notifications: externalNotifications,
-  onMarkAllRead: externalMarkAllRead,
-  onMarkRead: externalMarkRead,
+  profileTo,
+  notifications = [],
+  unreadCount: unreadCountProp,
+  onMarkAllRead,
+  onMarkRead,
+  isNotificationsLoading,
+  toast = null,
+  onOpenToast,
+  onDismissToast,
 }: DashboardHeaderProps) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [localNotifications, setLocalNotifications] = useState(initialNotifications);
 
-  const notifications = externalNotifications ?? localNotifications;
-  const unreadCount = notifications.filter((item) => !item.read).length;
-
-  const handleToggleNotifications = () => {
-    setNotificationsOpen((open) => !open);
-  };
+  const unreadCount =
+    typeof unreadCountProp === "number"
+      ? unreadCountProp
+      : notifications.filter((item) => !item.read).length;
 
   const handleCloseNotifications = useCallback(() => {
     setNotificationsOpen(false);
   }, []);
 
-  const handleMarkAllRead = () => {
-    if (externalMarkAllRead) {
-      externalMarkAllRead();
-      return;
-    }
+  const identity = (
+    <>
+      <img
+        src={avatar}
+        alt=""
+        className="size-9 shrink-0 rounded-full object-cover sm:size-10"
+        aria-hidden
+      />
 
-    setLocalNotifications((items) => items.map((item) => ({ ...item, read: true })));
-  };
-
-  const handleMarkRead = (id: string) => {
-    if (externalMarkRead) {
-      externalMarkRead(id);
-      return;
-    }
-
-    setLocalNotifications((items) =>
-      items.map((item) => (item.id === id ? { ...item, read: true } : item)),
-    );
-  };
+      <div className="hidden text-right md:block" dir="rtl">
+        <p className="text-sm font-semibold text-[#0f172a]">{displayName}</p>
+        <p className="text-xs text-[#64748b]">{roleSubtitle}</p>
+      </div>
+    </>
+  );
 
   return (
     <header
@@ -83,17 +90,18 @@ export const DashboardHeader = ({
         dir="ltr"
       >
         <div className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4">
-          <img
-            src={avatar}
-            alt=""
-            className="size-9 shrink-0 rounded-full sm:size-10"
-            aria-hidden
-          />
-
-          <div className="hidden text-right md:block" dir="rtl">
-            <p className="text-sm font-semibold text-[#0f172a]">{displayName}</p>
-            <p className="text-xs text-[#64748b]">{roleSubtitle}</p>
-          </div>
+          {profileTo ? (
+            <Link
+              to={profileTo}
+              className="flex min-w-0 items-center gap-2 rounded-2xl transition-opacity hover:opacity-90 sm:gap-3"
+              aria-label="الملف الشخصي"
+              title="الملف الشخصي"
+            >
+              {identity}
+            </Link>
+          ) : (
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">{identity}</div>
+          )}
 
           {messagesTo ? (
             <Link
@@ -122,7 +130,7 @@ export const DashboardHeader = ({
           <div className="relative">
             <button
               type="button"
-              onClick={handleToggleNotifications}
+              onClick={() => setNotificationsOpen((open) => !open)}
               className={cn(
                 "relative flex size-9 shrink-0 items-center justify-center rounded-xl border border-[#e2e8f0] text-[#64748b] transition-colors hover:bg-[#f8fafc]",
                 notificationsOpen &&
@@ -136,19 +144,20 @@ export const DashboardHeader = ({
                 src="/images/student/icon-bell.svg"
                 className="size-4"
               />
-              {unreadCount > 0 && (
+              {unreadCount > 0 ? (
                 <span className="absolute left-1.5 top-1.5 flex min-w-4 items-center justify-center rounded-full bg-[#f5a524] px-1 text-[10px] font-bold text-white">
-                  {unreadCount}
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
-              )}
+              ) : null}
             </button>
 
             <NotificationsPanel
               open={notificationsOpen}
               notifications={notifications}
               onClose={handleCloseNotifications}
-              onMarkAllRead={handleMarkAllRead}
-              onMarkRead={handleMarkRead}
+              onMarkAllRead={() => onMarkAllRead?.()}
+              onMarkRead={(id) => onMarkRead?.(id)}
+              isLoading={isNotificationsLoading}
             />
           </div>
         </div>
@@ -180,6 +189,12 @@ export const DashboardHeader = ({
           </button>
         </div>
       </div>
+
+      <NotificationToast
+        notification={toast}
+        onOpen={() => onOpenToast?.()}
+        onDismiss={() => onDismissToast?.()}
+      />
     </header>
   );
 };

@@ -13,10 +13,18 @@ export const CommunitySidebarPanel = ({
 }: CommunitySidebarPanelProps) => {
   const insights = buildCommunityInsights(
     posts.map((post) => ({
-      ...post,
+      id: post.id,
+      authorId: "",
+      author: post.author,
       role: "عضو",
-      likes: 0,
-      comments: 0,
+      avatar: post.avatar,
+      time: post.time,
+      content: post.content,
+      likes: post.likes,
+      likedByMe: false,
+      comments: post.replies,
+      attachments: [],
+      tag: post.tag,
     })),
   );
 

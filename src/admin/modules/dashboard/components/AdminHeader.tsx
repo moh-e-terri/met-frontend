@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/core/auth/AuthContext";
 import { getAdminBasePath } from "@/core/routing/appSurface";
 import { cn } from "@/shared/utils/cn";
 import { useNotifications } from "@/shared/hooks/useNotifications";
+import { NotificationToast } from "@/shared/components/NotificationToast";
 import { NotificationsPanel } from "@/student/components/NotificationsPanel";
 import { ADMIN_DEFAULT_AVATAR } from "@/admin/constants/assets";
 import {
@@ -26,6 +27,7 @@ export const AdminHeader = ({
   const { session } = useAuth();
   const basePath = getAdminBasePath();
   const displayName = session?.name ?? "مدير النظام";
+  const settingsPath = `${basePath}/settings`;
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const {
@@ -33,6 +35,10 @@ export const AdminHeader = ({
     unreadCount,
     handleMarkAllRead,
     handleMarkRead,
+    isLoading,
+    toast,
+    openToast,
+    dismissToast,
   } = useNotifications();
 
   const handleCloseNotifications = useCallback(() => {
@@ -52,21 +58,28 @@ export const AdminHeader = ({
         dir="ltr"
       >
         <div className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4">
-          <img
-            src={ADMIN_DEFAULT_AVATAR}
-            alt=""
-            className="size-9 shrink-0 rounded-full sm:size-10"
-            aria-hidden
-          />
+          <Link
+            to={settingsPath}
+            className="flex min-w-0 items-center gap-2 rounded-2xl transition-opacity hover:opacity-90 sm:gap-3"
+            aria-label="الملف الشخصي"
+            title="الملف الشخصي"
+          >
+            <img
+              src={session?.avatar || ADMIN_DEFAULT_AVATAR}
+              alt=""
+              className="size-9 shrink-0 rounded-full object-cover sm:size-10"
+              aria-hidden
+            />
 
-          <div className="hidden text-right md:block" dir="rtl">
-            <p className="text-sm font-semibold text-[#0f172a]">{displayName}</p>
-            <p className="text-xs text-[#64748b]">مدير النظام</p>
-          </div>
+            <div className="hidden text-right md:block" dir="rtl">
+              <p className="text-sm font-semibold text-[#0f172a]">{displayName}</p>
+              <p className="text-xs text-[#64748b]">مدير النظام</p>
+            </div>
+          </Link>
 
           <button
             type="button"
-            onClick={() => navigate(`${basePath}/settings`)}
+            onClick={() => navigate(settingsPath)}
             className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[#e2e8f0] text-[#64748b] transition-colors hover:bg-[#f8fafc]"
             aria-label="الإعدادات"
           >
@@ -74,6 +87,15 @@ export const AdminHeader = ({
               src="/images/admin/icon-settings.svg"
               className="size-5"
             />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate(`${basePath}/chats`)}
+            className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[#e2e8f0] text-[#64748b] transition-colors hover:bg-[#f8fafc]"
+            aria-label="المحادثات"
+          >
+            <AdminIcon src="/images/student/icon-chat.svg" className="size-5" />
           </button>
 
           <div className="relative">
@@ -93,11 +115,11 @@ export const AdminHeader = ({
                 src="/images/student/icon-bell.svg"
                 className="size-4"
               />
-              {unreadCount > 0 && (
+              {unreadCount > 0 ? (
                 <span className="absolute left-1.5 top-1.5 flex min-w-4 items-center justify-center rounded-full bg-[#f5a524] px-1 text-[10px] font-bold text-white">
-                  {unreadCount}
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
-              )}
+              ) : null}
             </button>
 
             <NotificationsPanel
@@ -106,6 +128,7 @@ export const AdminHeader = ({
               onClose={handleCloseNotifications}
               onMarkAllRead={handleMarkAllRead}
               onMarkRead={handleMarkRead}
+              isLoading={isLoading}
             />
           </div>
         </div>
@@ -151,6 +174,12 @@ export const AdminHeader = ({
           </button>
         </div>
       </div>
+
+      <NotificationToast
+        notification={toast}
+        onOpen={openToast}
+        onDismiss={dismissToast}
+      />
     </header>
   );
 };

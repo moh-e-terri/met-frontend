@@ -1,9 +1,15 @@
-import { apiClient, type ApiEnvelope } from "@/core/api/client";
-import { asRecord, pickString } from "@/core/api/utils";
+import { apiClient, isApiError, type ApiEnvelope } from "@/core/api/client";
+import { asRecord, pickString, resolveMediaUrl } from "@/core/api/utils";
+import {
+  clearAuthToken,
+  getAuthToken,
+  getRefreshToken,
+  onAuthTokenCleared,
+  renewAccessToken,
+  runWithUnauthorizedLogoutSuppressed,
+  setAuthTokens,
+} from "./tokenStorage";
 import type { AuthSession, AuthSignUpPayload, UserRole } from "./types";
-
-const TOKEN_KEY = "met_auth_token";
-const SESSION_KEY = "met_auth_session";
 
 type ApiRole = UserRole | "instructor";
 
@@ -19,10 +25,13 @@ interface ApiUser {
   lastName?: string;
   name?: string;
   fullName?: string;
+  profileImage?: string;
+  avatar?: string;
 }
 
 interface AuthResponseData {
   accessToken?: string;
+  refreshToken?: string;
   token?: string;
   user?: ApiUser;
   university?: {
@@ -32,6 +41,13 @@ interface AuthResponseData {
   };
 }
 
+/** In-tab session only — never written as a full profile blob to shared storage. */
+let memorySession: AuthSession | null = null;
+
+onAuthTokenCleared(() => {
+  memorySession = null;
+});
+
 function normalizeRole(role?: ApiRole): UserRole {
   if (role === "admin" || role === "teacher" || role === "student") return role;
   if (role === "instructor") return "teacher";
@@ -40,15 +56,19 @@ function normalizeRole(role?: ApiRole): UserRole {
 
 function normalizeSession(data: AuthResponseData | ApiUser): AuthSession {
   const user = "user" in data && data.user ? data.user : (data as ApiUser);
-  const token = "accessToken" in data ? data.accessToken || data.token : undefined;
+  const token =
+    pickString(
+      "accessToken" in data ? (data as AuthResponseData).accessToken : undefined,
+      "token" in data ? (data as AuthResponseData).token : undefined,
+    ) || undefined;
   const role = normalizeRole(user.role);
+  const firstName = pickString(user.firstName) || undefined;
+  const secondName = pickString(user.secondName, user.middleName) || undefined;
+  const familyName = pickString(user.familyName, user.lastName) || undefined;
   const name =
     user.name ||
     user.fullName ||
-    [user.firstName, user.secondName || user.middleName, user.familyName || user.lastName]
-      .filter(Boolean)
-      .join(" ")
-      .trim() ||
+    [firstName, secondName, familyName].filter(Boolean).join(" ").trim() ||
     user.email ||
     "مستخدم";
 
@@ -58,6 +78,11 @@ function normalizeSession(data: AuthResponseData | ApiUser): AuthSession {
     email: user.email || "",
     name: role === "teacher" && !name.startsWith("د.") ? `د. ${name}` : name,
     token,
+    firstName,
+    secondName,
+    familyName,
+    avatar:
+      resolveMediaUrl(pickString(user.profileImage, user.avatar)) || undefined,
   };
 }
 
@@ -78,24 +103,42 @@ function enrichStudentSession(
   };
 }
 
-function persistSession(session: AuthSession) {
-  if (session.token) {
-    localStorage.setItem(TOKEN_KEY, session.token);
-    localStorage.setItem("token", session.token);
+function rememberSession(session: AuthSession, refreshToken?: string | null) {
+  memorySession = session;
+  setAuthTokens({
+    accessToken: session.token || null,
+    refreshToken: refreshToken === undefined ? undefined : refreshToken,
+  });
+}
+
+function extractMeUser(raw: unknown): ApiUser {
+  const data = asRecord(raw);
+  const nestedUser = asRecord(data.user);
+  if (pickString(nestedUser.id, nestedUser._id, nestedUser.email, nestedUser.role)) {
+    return nestedUser as ApiUser;
   }
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  return data as ApiUser;
+}
+
+async function fetchCurrentUser(token: string): Promise<AuthSession> {
+  const response = await apiClient.get<ApiEnvelope<ApiUser | { user: ApiUser } | null>>(
+    "/auth/me",
+  );
+  const rawData = response.data.data ?? response.data;
+  const session = enrichStudentSession(
+    { ...normalizeSession(extractMeUser(rawData)), token },
+    undefined,
+    memorySession?.universityId,
+  );
+  return {
+    ...session,
+    universityName: session.universityName || memorySession?.universityName,
+    metBalance: session.metBalance ?? memorySession?.metBalance,
+  };
 }
 
 export function getSession(): AuthSession | null {
-  const raw = localStorage.getItem(SESSION_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as AuthSession;
-  } catch {
-    localStorage.removeItem(SESSION_KEY);
-    return null;
-  }
+  return memorySession;
 }
 
 export async function signIn(email: string, password: string): Promise<AuthSession> {
@@ -103,8 +146,12 @@ export async function signIn(email: string, password: string): Promise<AuthSessi
     email: email.trim(),
     password,
   });
-  const session = enrichStudentSession(normalizeSession(response.data.data), response.data.data);
-  persistSession(session);
+  const data = response.data.data;
+  const session = enrichStudentSession(normalizeSession(data), data);
+  if (!session.token) {
+    throw new Error("لم يُرجع الخادم رمز دخول صالحاً");
+  }
+  rememberSession(session, pickString(data.refreshToken) || null);
   return session;
 }
 
@@ -121,46 +168,64 @@ export async function signUp(payload: AuthSignUpPayload): Promise<AuthSession> {
 
   const registerData = response.data.data;
   let session = normalizeSession(registerData);
+  let refreshToken = pickString(registerData.refreshToken) || null;
 
   if (!session.token) {
     session = await signIn(payload.email, payload.password);
+    return session;
   }
 
   session = enrichStudentSession(session, registerData, payload.universityId);
-  persistSession(session);
+  rememberSession(session, refreshToken);
   return session;
 }
 
 export async function refreshCurrentUser(): Promise<AuthSession | null> {
-  const token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem("token");
-  const existingSession = getSession();
-  if (!token) return existingSession;
+  let token = getAuthToken() || memorySession?.token || null;
 
-  const response = await apiClient.get<ApiEnvelope<ApiUser | { user: ApiUser }>>("/auth/me");
-  const rawData = response.data.data;
-  const session = enrichStudentSession(
-    { ...normalizeSession("user" in rawData ? rawData.user : rawData), token },
-    undefined,
-    existingSession?.universityId,
-  );
-  const nextSession = {
-    ...session,
-    universityName: session.universityName || existingSession?.universityName,
-    metBalance: session.metBalance ?? existingSession?.metBalance,
-  };
-  persistSession(nextSession);
-  return nextSession;
+  // Access expired / missing — try this tab's refresh token first.
+  if (!token && getRefreshToken()) {
+    token = await renewAccessToken();
+  }
+
+  if (!token) {
+    memorySession = null;
+    return null;
+  }
+
+  // Re-assert persistence for this tab before calling the API.
+  setAuthTokens({ accessToken: token });
+
+  return runWithUnauthorizedLogoutSuppressed(async () => {
+    try {
+      const nextSession = await fetchCurrentUser(token!);
+      rememberSession(nextSession);
+      return nextSession;
+    } catch (error) {
+      if (!isApiError(error) || error.status !== 401) {
+        throw error;
+      }
+
+      const renewed = await renewAccessToken();
+      if (!renewed) {
+        throw error;
+      }
+
+      const nextSession = await fetchCurrentUser(renewed);
+      rememberSession(nextSession);
+      return nextSession;
+    }
+  });
 }
 
 export async function signOut() {
   try {
     await apiClient.post("/auth/logout");
   } catch {
-    // Ignore logout failures; local session is cleared below.
+    // Ignore logout failures; local token is cleared below.
   } finally {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem("token");
-    localStorage.removeItem(SESSION_KEY);
+    memorySession = null;
+    clearAuthToken();
   }
 }
 

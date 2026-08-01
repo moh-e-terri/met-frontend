@@ -24,7 +24,7 @@ const statCards = [
   },
   {
     key: "rank" as const,
-    label: "الترتيب العام",
+    label: "مستوى الأداء",
     icon: "/images/student/icon-rank.svg",
     iconBg: "bg-[#fff7ed]",
     iconColor: "text-[#f5a524]",

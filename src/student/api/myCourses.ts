@@ -58,10 +58,11 @@ export async function fetchMyCourseDetail(courseId: string): Promise<MyCourseDat
     quizzes: content.quizzes,
     assignments: content.assignments,
     instructor: {
+      id: content.instructorId,
       name: content.instructor ?? "المحاضر",
       role: "محاضر الدورة",
-      bio: "يمكنك التواصل مع المحاضر عبر المحادثات أو المجتمع.",
-      avatar: COMMUNITY_USER_AVATARS[0],
+      bio: "يمكنك التواصل مع المحاضر عبر المحادثات أو مجتمع المقرر.",
+      avatar: content.instructorAvatar || COMMUNITY_USER_AVATARS[0],
     },
     stats: [
       { label: "درساً", value: content.totalLessons },

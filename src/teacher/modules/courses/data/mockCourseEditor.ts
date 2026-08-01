@@ -24,6 +24,11 @@ export interface CurriculumLesson {
   title: string;
   subtitle: string;
   status: LessonStatus;
+  duration?: number;
+  order?: number;
+  isPublished?: boolean;
+  description?: string;
+  hasVideo?: boolean;
 }
 
 export interface RecentUpload {

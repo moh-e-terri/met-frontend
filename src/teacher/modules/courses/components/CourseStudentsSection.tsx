@@ -1,15 +1,21 @@
+import { Link } from "react-router-dom";
 import { AnimatedBar } from "@/shared/motion";
+import { StartChatButton } from "@/shared/modules/chats";
 import type { CourseStudent } from "@/teacher/api";
 import { TeacherIcon } from "../../dashboard/components/TeacherIcon";
 
 interface CourseStudentsSectionProps {
   students: CourseStudent[];
   isLoading?: boolean;
+  courseId?: string;
+  studentProfileBasePath?: string;
 }
 
 export const CourseStudentsSection = ({
   students,
   isLoading,
+  courseId,
+  studentProfileBasePath = "/teacher/students",
 }: CourseStudentsSectionProps) => {
   return (
     <section
@@ -39,46 +45,62 @@ export const CourseStudentsSection = ({
         </p>
       ) : (
         <ul className="space-y-3">
-          {students.map((student) => (
-            <li
-              key={student.id}
-              className="flex flex-col gap-3 rounded-2xl border border-[#f1f5f9] bg-[#f8fafc] p-4 sm:flex-row sm:items-center"
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <img
-                  src={student.avatar}
-                  alt=""
-                  className="size-11 shrink-0 rounded-full"
-                  aria-hidden
-                />
-                <div className="min-w-0 text-right">
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <p className="font-bold text-[#0f172a]">{student.name}</p>
-                    {student.isRecognized ? (
-                      <span className="rounded-full bg-[#ecfdf5] px-2 py-0.5 text-[10px] font-semibold text-[#14b8a6]">
-                        معروف مسبقاً
-                      </span>
-                    ) : null}
+          {students.map((student) => {
+            const profilePath = `${studentProfileBasePath}/${student.id}`;
+            return (
+              <li
+                key={student.id}
+                className="flex flex-col gap-3 rounded-2xl border border-[#f1f5f9] bg-[#f8fafc] p-4 sm:flex-row sm:items-center"
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Link to={profilePath} className="shrink-0">
+                    <img
+                      src={student.avatar}
+                      alt=""
+                      className="size-11 rounded-full object-cover transition-opacity hover:opacity-90"
+                      aria-hidden
+                    />
+                  </Link>
+                  <div className="min-w-0 flex-1 text-right">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        to={profilePath}
+                        className="font-bold text-[#0f172a] transition-colors hover:text-[#f5a524]"
+                      >
+                        {student.name}
+                      </Link>
+                      {student.isRecognized ? (
+                        <span className="rounded-full bg-[#ecfdf5] px-2 py-0.5 text-[10px] font-semibold text-[#14b8a6]">
+                          معروف مسبقاً
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-0.5 text-xs text-[#64748b]">
+                      {student.university ?? student.email ?? "طالب"}
+                    </p>
                   </div>
-                  <p className="mt-0.5 text-xs text-[#64748b]">
-                    {student.university ?? student.email ?? "طالب"}
-                  </p>
+                  <StartChatButton
+                    userId={student.id}
+                    name={student.name}
+                    chatsPath="/teacher/chats"
+                    courseId={courseId}
+                  />
                 </div>
-              </div>
 
-              <div className="w-full sm:max-w-[220px]">
-                <div className="mb-1 flex items-center justify-between text-xs text-[#64748b]">
-                  <span dir="ltr">{student.progress}%</span>
-                  <span>التقدّم</span>
+                <div className="w-full sm:max-w-[220px]">
+                  <div className="mb-1 flex items-center justify-between text-xs text-[#64748b]">
+                    <span dir="ltr">{student.progress}%</span>
+                    <span>التقدّم</span>
+                  </div>
+                  <AnimatedBar
+                    value={student.progress}
+                    className="h-2 bg-[#e2e8f0]"
+                    barClassName="rounded-full bg-[#f5a524]"
+                  />
                 </div>
-                <AnimatedBar
-                  value={student.progress}
-                  className="h-2 bg-[#e2e8f0]"
-                  barClassName="rounded-full bg-[#f5a524]"
-                />
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

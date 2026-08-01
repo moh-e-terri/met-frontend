@@ -8,12 +8,16 @@ import { StudentIcon } from "../../dashboard/components/StudentIcon";
 
 interface CatalogCourseCardProps {
   course: AvailableCourse;
+  myMetPoints?: number;
 }
 
-export const CatalogCourseCard = ({ course }: CatalogCourseCardProps) => {
+export const CatalogCourseCard = ({ course, myMetPoints = 0 }: CatalogCourseCardProps) => {
   const navigate = useNavigate();
+  const canEnroll = course.canAfford && !course.isEnrolled;
+  const shortfall = Math.max(course.metCost - myMetPoints, 0);
 
   const handleEnroll = () => {
+    if (!canEnroll) return;
     savePendingEnrollment(course);
     navigate(`/student/payments?courseId=${course.id}`, { state: { course } });
   };
@@ -47,7 +51,7 @@ export const CatalogCourseCard = ({ course }: CatalogCourseCardProps) => {
           dir="ltr"
         >
           <StudentIcon src="/images/admin/icon-coin.svg" className="size-3.5 text-[#f5a524]" />
-          {course.metCost} MET
+          {course.metCostDisplay}
         </span>
       </div>
 
@@ -55,6 +59,9 @@ export const CatalogCourseCard = ({ course }: CatalogCourseCardProps) => {
         <h3 className="min-h-14 text-right text-lg font-bold leading-snug text-[#0f172a]">
           {course.title}
         </h3>
+        {course.university ? (
+          <p className="mt-1 text-sm font-semibold text-[#f5a524]">{course.university}</p>
+        ) : null}
         <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#64748b]">
           {course.description}
         </p>
@@ -82,9 +89,28 @@ export const CatalogCourseCard = ({ course }: CatalogCourseCardProps) => {
 
         <div className="mt-auto pt-5">
           {!course.canAfford && !course.isEnrolled ? (
-            <p className="mb-3 rounded-xl bg-[#fff7ed] px-3 py-2 text-center text-xs font-medium text-[#f59e0b]">
-              رصيد MET غير كافٍ — أكمل الدفع لشحن الرصيد والاشتراك
-            </p>
+            <div className="mb-3 space-y-1 rounded-xl bg-[#fff7ed] px-3 py-2 text-center text-xs font-medium text-[#92400e]">
+              <p>
+                رصيدك:{" "}
+                <span dir="ltr" className="font-bold">
+                  {myMetPoints} MET
+                </span>
+              </p>
+              <p>
+                سعر الكورس:{" "}
+                <span dir="ltr" className="font-bold">
+                  {course.metCostDisplay}
+                </span>
+              </p>
+              {shortfall > 0 ? (
+                <p>
+                  ينقصك:{" "}
+                  <span dir="ltr" className="font-bold">
+                    {shortfall} MET
+                  </span>
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           {course.isEnrolled ? (
@@ -99,9 +125,10 @@ export const CatalogCourseCard = ({ course }: CatalogCourseCardProps) => {
             <button
               type="button"
               onClick={handleEnroll}
-              className="w-full rounded-2xl bg-[#f5a524] py-3 text-sm font-bold text-white shadow-[0px_10px_15px_-3px_rgba(245,165,36,0.25)] transition-transform hover:scale-[1.01]"
+              disabled={!canEnroll}
+              className="w-full rounded-2xl bg-[#f5a524] py-3 text-sm font-bold text-white shadow-[0px_10px_15px_-3px_rgba(245,165,36,0.25)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:bg-[#cbd5e1] disabled:shadow-none"
             >
-              اشتراك في المقرر
+              {canEnroll ? "سجّل الآن" : "رصيدك غير كافٍ"}
             </button>
           )}
         </div>

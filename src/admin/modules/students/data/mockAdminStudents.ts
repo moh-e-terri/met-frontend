@@ -9,11 +9,21 @@ export type StudentListStatus = "active" | "waiting" | "graduate";
 
 export interface AdminStudent {
   id: string;
+  /** Auth user id — required for starting chats */
+  userId: string;
   name: string;
+  firstName?: string;
+  secondName?: string;
+  familyName?: string;
   email: string;
   avatar: string;
   coursesCount: number;
   totalPaid: string;
+  metPoints?: number;
+  universityId?: string;
+  universityName?: string;
+  isActive?: boolean;
+  createdAt?: string;
   paymentNote: string;
   paymentNoteTone: "success" | "danger" | "neutral";
   paymentStatus: StudentPaymentStatus;
@@ -23,6 +33,7 @@ export interface AdminStudent {
   gpa: string;
   attendance: string;
   enrolledCourses: {
+    id?: string;
     name: string;
     progress: number;
     tone: "orange" | "green";
@@ -47,6 +58,7 @@ export interface AdminStudent {
 export const adminStudents: AdminStudent[] = [
   {
     id: "1",
+    userId: "1",
     name: "محمد بن قحطان",
     email: "m.qahtan@university.edu",
     avatar: "/images/student/avatar-user-2.svg",
@@ -94,6 +106,7 @@ export const adminStudents: AdminStudent[] = [
   },
   {
     id: "2",
+    userId: "2",
     name: "Alex Rivers",
     email: "alex.rivers@campus.edu",
     avatar: "/images/student/avatar-user-3.svg",
@@ -124,6 +137,7 @@ export const adminStudents: AdminStudent[] = [
   },
   {
     id: "3",
+    userId: "3",
     name: "سارة العتيبي",
     email: "sara.otibi@university.edu",
     avatar: "/images/student/avatar-user-1.svg",
@@ -145,6 +159,7 @@ export const adminStudents: AdminStudent[] = [
   },
   {
     id: "4",
+    userId: "4",
     name: "خالد المنصور",
     email: "k.almansour@university.edu",
     avatar: "/images/student/avatar-user-4.svg",
@@ -165,6 +180,7 @@ export const adminStudents: AdminStudent[] = [
   },
   {
     id: "5",
+    userId: "5",
     name: "ليلى الحربي",
     email: "l.harbi@university.edu",
     avatar: "/images/student/avatar-user-5.svg",

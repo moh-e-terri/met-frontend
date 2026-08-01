@@ -30,12 +30,12 @@ export const AdminCoursesSummary = ({
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="border-b border-[#e2e8f0] text-right text-sm text-[#64748b]">
-                  <th className="px-3 py-3 font-medium">اسم المقرر</th>
-                  <th className="px-3 py-3 font-medium">المحاضر</th>
-                  <th className="px-3 py-3 font-medium">الجامعة</th>
-                  <th className="px-3 py-3 font-medium">الإيرادات</th>
-                  <th className="px-3 py-3 font-medium">الحالة</th>
+                <tr className="border-b border-[#e2e8f0] text-sm text-[#64748b]">
+                  <th className="px-3 py-3 text-right font-medium">اسم المقرر</th>
+                  <th className="px-3 py-3 text-right font-medium">المحاضر</th>
+                  <th className="px-3 py-3 text-right font-medium">الجامعة</th>
+                  <th className="px-3 py-3 text-right font-medium">الإيرادات</th>
+                  <th className="px-3 py-3 text-right font-medium">الحالة</th>
                 </tr>
               </thead>
               <tbody>
@@ -45,18 +45,22 @@ export const AdminCoursesSummary = ({
                   return (
                     <tr
                       key={course.id}
-                      className="border-b border-[#f1f5f9] text-right text-sm last:border-0"
+                      className="border-b border-[#f1f5f9] text-sm last:border-0"
                     >
-                      <td className="px-3 py-4">
+                      <td className="px-3 py-4 text-right">
                         <p className="font-bold text-[#0f172a]">{course.name}</p>
                         <p className="mt-0.5 text-xs text-[#94a3b8]">{course.students}</p>
                       </td>
-                      <td className="px-3 py-4 text-[#475569]">{course.lecturer}</td>
-                      <td className="px-3 py-4 text-[#475569]">{course.university}</td>
-                      <td className="px-3 py-4 font-semibold text-[#0f172a]" dir="ltr">
-                        {course.revenue}
+                      <td className="px-3 py-4 text-right text-[#475569]">
+                        {course.lecturer}
                       </td>
-                      <td className="px-3 py-4">
+                      <td className="px-3 py-4 text-right text-[#475569]">
+                        {course.university}
+                      </td>
+                      <td className="px-3 py-4 text-right font-semibold text-[#0f172a]">
+                        <span dir="ltr">{course.revenue}</span>
+                      </td>
+                      <td className="px-3 py-4 text-right">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
                         >

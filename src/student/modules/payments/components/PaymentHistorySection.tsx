@@ -1,122 +1,116 @@
-import type { MetTransaction } from "@/student/api/metHistory";
+import type { MetTransaction, MetTransactionType } from "@/student/api/metHistory";
+import { cn } from "@/shared/utils/cn";
 import { StudentIcon } from "../../dashboard/components/StudentIcon";
 
 interface PaymentHistorySectionProps {
   transactions: MetTransaction[];
-  currentMet?: number;
   isLoading?: boolean;
 }
 
+const typeMeta: Record<
+  MetTransactionType,
+  { label: string; amountClass: string; dotClass: string; icon: string }
+> = {
+  credit: {
+    label: "شحن رصيد",
+    amountClass: "text-[#14b8a6]",
+    dotClass: "bg-[#14b8a6]",
+    icon: "/images/admin/icon-coin.svg",
+  },
+  debit: {
+    label: "خصم",
+    amountClass: "text-[#ef4444]",
+    dotClass: "bg-[#ef4444]",
+    icon: "/images/student/icon-payment.svg",
+  },
+  purchase: {
+    label: "تسجيل كورس",
+    amountClass: "text-[#ef4444]",
+    dotClass: "bg-[#ef4444]",
+    icon: "/images/student/icon-payment.svg",
+  },
+  refund: {
+    label: "استرداد",
+    amountClass: "text-[#f59e0b]",
+    dotClass: "bg-[#f59e0b]",
+    icon: "/images/student/icon-route.svg",
+  },
+  unknown: {
+    label: "عملية",
+    amountClass: "text-[#64748b]",
+    dotClass: "bg-[#94a3b8]",
+    icon: "/images/student/icon-clock.svg",
+  },
+};
+
 export const PaymentHistorySection = ({
   transactions,
-  currentMet,
   isLoading,
 }: PaymentHistorySectionProps) => {
   return (
-    <section className="rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6">
-      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" dir="rtl">
-        <h2 className="flex items-center justify-start gap-2 text-lg font-bold text-[#0f172a]">
+    <section
+      className="rounded-3xl border border-[#e2e8f0] bg-white p-5 shadow-sm sm:p-6"
+      dir="rtl"
+    >
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#0f172a]">
           <StudentIcon
             src="/images/student/icon-clock.svg"
             className="size-5 text-[#f5a524]"
           />
-          <span>سجل نقاط MET</span>
+          سجل المعاملات
         </h2>
-        {typeof currentMet === "number" ? (
-          <p className="text-sm text-[#64748b]">
-            الرصيد الحالي:{" "}
-            <span className="font-bold text-[#0f172a]" dir="ltr">
-              {currentMet} MET
-            </span>
-          </p>
-        ) : null}
+        <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-[#64748b]">
+          {transactions.length} عملية
+        </span>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-14 animate-pulse rounded-2xl bg-[#e2e8f0]" />
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-16 animate-pulse rounded-2xl bg-[#e2e8f0]" />
           ))}
         </div>
       ) : transactions.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[#64748b]" dir="rtl">
+        <p className="py-10 text-center text-sm text-[#64748b]">
           لا توجد عمليات MET مسجّلة بعد.
         </p>
       ) : (
-        <>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[640px]" dir="rtl">
-              <thead>
-                <tr className="border-b border-[#e2e8f0] text-right text-sm text-[#64748b]">
-                  <th className="px-3 py-3 font-medium">العملية</th>
-                  <th className="px-3 py-3 font-medium">الوصف</th>
-                  <th className="px-3 py-3 font-medium">التاريخ</th>
-                  <th className="px-3 py-3 font-medium">المبلغ</th>
-                  <th className="px-3 py-3 font-medium">الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((payment) => (
-                  <tr
-                    key={payment.id}
-                    className="border-b border-[#f1f5f9] text-right text-sm text-[#475569] last:border-0"
-                  >
-                    <td className="px-3 py-4 font-semibold text-[#0f172a]" dir="ltr">
-                      {payment.id}
-                    </td>
-                    <td className="px-3 py-4 text-[#0f172a]">{payment.title}</td>
-                    <td className="px-3 py-4">{payment.date}</td>
-                    <td className="px-3 py-4 font-semibold text-[#0f172a]" dir="ltr">
-                      {payment.amount}
-                    </td>
-                    <td className="px-3 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          payment.status === "completed"
-                            ? "bg-[#ecfdf5] text-[#14b8a6]"
-                            : payment.status === "pending"
-                              ? "bg-[#fff7ed] text-[#f5a524]"
-                              : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        {payment.status === "completed"
-                          ? "مكتمل"
-                          : payment.status === "pending"
-                            ? "قيد المعالجة"
-                            : "فشل"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="space-y-4 md:hidden" dir="rtl">
-            {transactions.map((payment) => (
-              <article
-                key={payment.id}
-                className="rounded-2xl border border-[#f1f5f9] bg-[#f8fafc] p-4 text-right"
+        <ul className="space-y-2">
+          {transactions.map((tx) => {
+            const meta = typeMeta[tx.type] ?? typeMeta.unknown;
+            return (
+              <li
+                key={tx.id}
+                className="flex items-start gap-3 rounded-2xl border border-[#f1f5f9] bg-[#f8fafc] px-4 py-3.5"
               >
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="inline-flex rounded-full bg-[#ecfdf5] px-2.5 py-1 text-xs font-semibold text-[#14b8a6]">
-                    {payment.status === "completed" ? "مكتمل" : payment.status}
-                  </span>
-                  <span className="font-semibold text-[#0f172a]" dir="ltr">
-                    {payment.id}
-                  </span>
+                <span
+                  className={cn(
+                    "mt-1.5 size-2.5 shrink-0 rounded-full",
+                    meta.dotClass,
+                  )}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 text-right">
+                      <p className="font-bold text-[#0f172a]">{tx.title}</p>
+                      <p className="mt-1 text-xs text-[#94a3b8]">
+                        {meta.label} · {tx.date}
+                      </p>
+                    </div>
+                    <span
+                      className={cn("shrink-0 text-sm font-black", meta.amountClass)}
+                      dir="ltr"
+                    >
+                      {tx.amount}
+                    </span>
+                  </div>
                 </div>
-                <p className="font-medium text-[#0f172a]">{payment.title}</p>
-                <div className="mt-2 flex items-center justify-between text-sm text-[#64748b]">
-                  <span dir="ltr" className="font-semibold text-[#0f172a]">
-                    {payment.amount}
-                  </span>
-                  <span>{payment.date}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );

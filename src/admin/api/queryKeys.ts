@@ -13,6 +13,8 @@ export const adminQueryKeys = {
     page?: number;
     limit?: number;
   }) => ["admin", "students", filters] as const,
+  studentProfile: (studentId: string) =>
+    ["admin", "students", "profile", studentId] as const,
   financePayments: (params?: { page?: number; limit?: number }) =>
     ["admin", "finance", "payments", params ?? {}] as const,
 };

@@ -218,46 +218,52 @@ export function mapFinancialSummaryCards(
 ): FinancialSummaryCardData[] {
   const finance = asRecord(stats.finance);
   const totalIncome = pickNumber(finance.totalIncomeMET, finance.totalIncome);
+  const totalIncomeUSD = pickNumber(finance.totalIncomeUSD);
   const reserved = pickNumber(finance.totalReservedMET, finance.totalReserved);
+  const reservedUSD = pickNumber(finance.totalReservedUSD);
   const netProfit = pickNumber(finance.netProfitMET, finance.netProfit);
-  const instructorPayout = Math.max(totalIncome - netProfit, 0);
-  const releaseProgress =
-    totalIncome > 0 ? Math.min(100, Math.round(((totalIncome - reserved) / totalIncome) * 100)) : 0;
+  const netProfitUSD = pickNumber(finance.netProfitUSD);
 
   return [
     {
-      label: "إجمالي إيرادات المنصة",
+      label: "الدخل الكلي",
       value: totalIncome.toLocaleString("en-US"),
       suffix: "MET",
-      badge: `${netProfit.toLocaleString("en-US")} صافي`,
-      badgeClassName: "bg-[#ecfdf5] text-[#14b8a6]",
+      note: totalIncomeUSD
+        ? `≈ ${totalIncomeUSD.toLocaleString("en-US")} USD — كل ما دفعه الطلاب`
+        : "كل المبالغ التي دفعها الطلاب",
+      badge: `${instructorCount} مدرّساً`,
+      badgeClassName: "bg-[#eff6ff] text-[#3b82f6]",
       icon: "/images/admin/icon-coin.svg",
       iconBg: "bg-[#fff7ed]",
       iconColor: "text-[#f5a524]",
       showTrend: true,
     },
     {
-      label: "مدفوعات المدربين",
-      value: instructorPayout.toLocaleString("en-US"),
-      suffix: "MET",
-      note: `${instructorCount} مدرباً على المنصة`,
-      badge: "حصة المحاضر",
-      badgeClassName: "bg-[#eff6ff] text-[#3b82f6]",
-      icon: "/images/student/icon-groups.svg",
-      iconBg: "bg-[#eff6ff]",
-      iconColor: "text-[#3b82f6]",
-    },
-    {
-      label: "المبالغ المحتجزة",
+      label: "المحجوز",
       value: reserved.toLocaleString("en-US"),
       suffix: "MET",
+      note: reservedUSD
+        ? `≈ ${reservedUSD.toLocaleString("en-US")} USD — مستحقات بانتظار الصرف`
+        : "مستحقات المدرسين بانتظار الصرف",
       badge: totalIncome > 0 ? `${Math.round((reserved / totalIncome) * 100)}%` : "0%",
       badgeClassName: "bg-[#fff7ed] text-[#f5a524]",
       icon: "/images/student/icon-lock.svg",
       iconBg: "bg-[#fff7ed]",
       iconColor: "text-[#f5a524]",
-      releaseProgress,
-      releaseLabel: "تقدم الإفراج",
+    },
+    {
+      label: "صافي الربح",
+      value: netProfit.toLocaleString("en-US"),
+      suffix: "MET",
+      note: netProfitUSD
+        ? `≈ ${netProfitUSD.toLocaleString("en-US")} USD — حصة المنصة`
+        : "حصة المنصة بعد خصم مستحقات المدرسين",
+      badge: "عمولة المنصة",
+      badgeClassName: "bg-[#ecfdf5] text-[#14b8a6]",
+      icon: "/images/teacher/icon-money.svg",
+      iconBg: "bg-[#ecfdf5]",
+      iconColor: "text-[#14b8a6]",
     },
   ];
 }

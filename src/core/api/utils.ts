@@ -7,7 +7,9 @@ export function asRecord(value: unknown): Record<string, unknown> {
 export function resolveMediaUrl(url?: string): string | undefined {
   const trimmed = pickString(url);
   if (!trimmed) return undefined;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^https?:\/\//i.test(trimmed) || /^data:/i.test(trimmed) || /^blob:/i.test(trimmed)) {
+    return trimmed;
+  }
 
   const apiBase =
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
@@ -46,6 +48,33 @@ export function pickId(record: Record<string, unknown>): string {
   const userId = record.userId;
   const userIdString = typeof userId === "string" ? userId : "";
   return pickString(record._id, record.id, userIdString, record.instructorId);
+}
+
+/**
+ * Auth User `_id` for chat / messaging.
+ * Prefer `userId` (string or populated object) over Student/Instructor profile `_id`.
+ */
+export function pickAuthUserId(...sources: unknown[]): string {
+  for (const source of sources) {
+    if (typeof source === "string" && source.trim()) return source.trim();
+
+    const record = asRecord(source);
+    if (!Object.keys(record).length) continue;
+
+    const userIdValue = record.userId ?? record.user;
+    if (typeof userIdValue === "string" && userIdValue.trim()) {
+      return userIdValue.trim();
+    }
+
+    const nested = asRecord(userIdValue);
+    const nestedId = pickString(nested._id, nested.id);
+    if (nestedId) return nestedId;
+
+    const fromPickNested = pickNestedUser(record);
+    const nestedUserId = pickString(fromPickNested._id, fromPickNested.id);
+    if (nestedUserId && fromPickNested !== record) return nestedUserId;
+  }
+  return "";
 }
 
 export function pickNestedUser(raw: Record<string, unknown>): Record<string, unknown> {

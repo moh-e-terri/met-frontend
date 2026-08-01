@@ -1,6 +1,10 @@
+import { Link } from "react-router-dom";
+import { getAdminBasePath } from "@/core/routing/appSurface";
 import { cn } from "@/shared/utils/cn";
 import { Pagination } from "@/shared/components/Pagination";
 import type { PaginationMeta } from "@/core/api/pagination";
+import { StartChatButton } from "@/shared/modules/chats";
+import { TablePersonCell, tableCellClass } from "@/shared/components/TablePersonCell";
 import { useState } from "react";
 import {
   lecturerStatusLabels,
@@ -26,6 +30,7 @@ export const AdminLecturersTable = ({
   onPageChange,
   isFetching,
 }: AdminLecturersTableProps) => {
+  const basePath = getAdminBasePath();
   const [sortBy, setSortBy] = useState("recent");
 
   return (
@@ -57,14 +62,16 @@ export const AdminLecturersTable = ({
       </div>
 
       <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[640px]">
+        <table className="w-full min-w-[720px]">
           <thead>
-            <tr className="border-b border-[#e2e8f0] text-right text-sm text-[#64748b]">
-              <th className="px-3 py-3 font-medium">اسم المعلم</th>
-              <th className="px-3 py-3 font-medium">التخصص</th>
-              <th className="px-3 py-3 font-medium">الدورات</th>
-              <th className="px-3 py-3 font-medium">الأرباح</th>
-              <th className="px-3 py-3 font-medium">الحالة</th>
+            <tr className="border-b border-[#e2e8f0] text-sm text-[#64748b]">
+              <th className={tableCellClass.th}>اسم المعلم</th>
+              <th className={tableCellClass.th}>البريد</th>
+              <th className={tableCellClass.th}>الدورات</th>
+              <th className={tableCellClass.th}>عدد الطلاب الكلي</th>
+              <th className={tableCellClass.th}>الأرباح</th>
+              <th className={tableCellClass.th}>الحالة</th>
+              <th className={tableCellClass.th}>محادثة</th>
             </tr>
           </thead>
           <tbody>
@@ -81,34 +88,42 @@ export const AdminLecturersTable = ({
                     isSelected ? "bg-[#fff7ed]/60" : "hover:bg-[#f8fafc]",
                   )}
                 >
-                  <td className="px-3 py-4">
-                    <div className="flex items-center justify-end gap-3">
-                      <span className="font-bold text-[#0f172a]">
-                        {lecturer.name}
-                      </span>
-                      <img
-                        src={lecturer.avatar}
-                        alt=""
-                        className="size-9 rounded-full"
-                        aria-hidden
-                      />
-                    </div>
+                  <td className={tableCellClass.td}>
+                    <Link
+                      to={`${basePath}/lecturers/${lecturer.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      className="block"
+                    >
+                      <TablePersonCell name={lecturer.name} avatar={lecturer.avatar} />
+                    </Link>
                   </td>
-                  <td className="px-3 py-4 text-[#475569]">
-                    {lecturer.specialization}
+                  <td className={tableCellClass.tdLtr}>
+                    <span className="inline-block text-[#64748b]" dir="ltr">
+                      {lecturer.email || "—"}
+                    </span>
                   </td>
-                  <td className="px-3 py-4 font-semibold text-[#0f172a]" dir="ltr">
-                    {lecturer.coursesCount}
+                  <td className={tableCellClass.tdStrong}>
+                    <span dir="ltr">{lecturer.coursesCount}</span>
                   </td>
-                  <td className="px-3 py-4 font-bold text-[#0f172a]" dir="ltr">
-                    {lecturer.earnings}
+                  <td className={tableCellClass.tdStrong}>
+                    <span dir="ltr">{lecturer.studentsCount}</span>
                   </td>
-                  <td className="px-3 py-4">
+                  <td className={tableCellClass.tdStrong}>
+                    <span dir="ltr">{lecturer.earnings}</span>
+                  </td>
+                  <td className={tableCellClass.td}>
                     <span
                       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
                     >
                       {status.label}
                     </span>
+                  </td>
+                  <td className={tableCellClass.td}>
+                    <StartChatButton
+                      userId={lecturer.userId || lecturer.id}
+                      name={lecturer.name}
+                      chatsPath="/admin/chats"
+                    />
                   </td>
                 </tr>
               );
@@ -134,7 +149,7 @@ export const AdminLecturersTable = ({
                   : "border-[#f1f5f9] bg-[#f8fafc] hover:bg-white",
               )}
             >
-              <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="mb-3 flex items-center justify-between gap-2">
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
                 >
@@ -144,18 +159,35 @@ export const AdminLecturersTable = ({
                   {lecturer.earnings}
                 </span>
               </div>
-              <div className="flex items-center justify-end gap-3">
-                <div>
-                  <p className="font-bold text-[#0f172a]">{lecturer.name}</p>
-                  <p className="mt-1 text-xs text-[#64748b]">
-                    {lecturer.specialization}
-                  </p>
-                </div>
-                <img
-                  src={lecturer.avatar}
-                  alt=""
-                  className="size-10 rounded-full"
-                  aria-hidden
+              <Link
+                to={`${basePath}/lecturers/${lecturer.id}`}
+                onClick={(event) => event.stopPropagation()}
+                className="block"
+              >
+              <TablePersonCell
+                name={lecturer.name}
+                avatar={lecturer.avatar}
+                avatarClassName="size-10"
+                subtitle={
+                  <>
+                    {lecturer.email ? (
+                      <p className="truncate text-xs text-[#64748b]" dir="ltr">
+                        {lecturer.email}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-xs text-[#64748b]">
+                      {lecturer.coursesCount} دورات · {lecturer.studentsCount} طالب
+                    </p>
+                  </>
+                }
+              />
+              </Link>
+              <div className="mt-3 flex justify-start">
+                <StartChatButton
+                  userId={lecturer.userId || lecturer.id}
+                  name={lecturer.name}
+                  chatsPath="/admin/chats"
+                  iconOnly={false}
                 />
               </div>
             </button>

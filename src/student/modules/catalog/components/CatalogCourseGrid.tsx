@@ -7,12 +7,14 @@ interface CatalogCourseGridProps {
   courses: AvailableCourse[];
   isLoading?: boolean;
   isFiltered?: boolean;
+  myMetPoints?: number;
 }
 
 export const CatalogCourseGrid = ({
   courses,
   isLoading,
   isFiltered,
+  myMetPoints = 0,
 }: CatalogCourseGridProps) => {
   if (isLoading) {
     return (
@@ -52,7 +54,7 @@ export const CatalogCourseGrid = ({
   return (
     <Stagger className="grid gap-6 md:grid-cols-2 xl:grid-cols-3" staggerMs={70}>
       {courses.map((course) => (
-        <CatalogCourseCard key={course.id} course={course} />
+        <CatalogCourseCard key={course.id} course={course} myMetPoints={myMetPoints} />
       ))}
     </Stagger>
   );

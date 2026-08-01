@@ -2,7 +2,7 @@ import { fetchCourseLessons } from "@/core/api/lessons";
 import { fetchCourseAssignments } from "@/core/api/assignments";
 import { fetchCourseExams } from "@/core/api/exams";
 import { apiClient, type ApiEnvelope } from "@/core/api/client";
-import { asArray, asRecord, pickId, pickNumber, pickString } from "@/core/api/utils";
+import { asArray, asRecord, pickAuthUserId, pickId, pickNumber, pickString, resolveMediaUrl } from "@/core/api/utils";
 import type { ApiLesson } from "@/core/api/lessons.types";
 import { mapApiLessons } from "@/core/api/lessons.types";
 import type { CourseLesson, LessonStatus } from "@/student/modules/courses/data/mockCourse";
@@ -12,6 +12,8 @@ export interface StudentCourseContent {
   courseId: string;
   title: string;
   instructor?: string;
+  instructorId?: string;
+  instructorAvatar?: string;
   progressPercent: number;
   completedLessons: number;
   totalLessons: number;
@@ -74,6 +76,8 @@ export function buildStudentCourseContent(
   meta?: {
     title?: string;
     instructor?: string;
+    instructorId?: string;
+    instructorAvatar?: string;
     progressPercent?: number;
     assignments?: MyCourseAssignment[];
     quizzes?: MyCourseQuiz[];
@@ -109,6 +113,8 @@ export function buildStudentCourseContent(
     courseId,
     title: meta?.title || "محتوى الدورة",
     instructor: meta?.instructor,
+    instructorId: meta?.instructorId,
+    instructorAvatar: meta?.instructorAvatar,
     progressPercent:
       meta?.progressPercent ??
       (totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0),
@@ -184,13 +190,37 @@ export async function fetchStudentCourseContent(courseId: string): Promise<Stude
     // content endpoint may already include assignments/exams
   }
 
+  const instructor = asRecord(course.instructor ?? course.instructorId ?? data.instructor);
+  const instructorUser = asRecord(instructor.userId ?? instructor.user);
+  const instructorId =
+    pickAuthUserId(instructor, course.instructor, course.instructorId, data.instructor) ||
+    pickString(course.instructorUserId, data.instructorUserId) ||
+    undefined;
+  const instructorAvatar =
+    resolveMediaUrl(
+      pickString(
+        instructor.profileImage,
+        instructor.avatar,
+        instructor.image,
+        instructorUser.profileImage,
+        instructorUser.avatar,
+        course.instructorAvatar,
+        data.instructorAvatar,
+      ),
+    ) || undefined;
+
   return buildStudentCourseContent(courseId, apiLessons, {
     title: pickString(course.title, course.name, data.title),
-    instructor: pickString(
-      asRecord(course.instructor).name,
-      course.instructorName,
-      data.instructorName,
-    ),
+    instructor:
+      pickString(
+        instructorUser.fullName,
+        instructorUser.name,
+        instructor.name,
+        course.instructorName,
+        data.instructorName,
+      ) || undefined,
+    instructorId,
+    instructorAvatar,
     progressPercent: pickNumber(course.progress, course.progressPercent, data.progress),
     assignments,
     quizzes,

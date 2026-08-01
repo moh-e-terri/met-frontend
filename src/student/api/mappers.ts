@@ -3,6 +3,7 @@ import {
   mapNotifications as mapNotificationsCore,
   pickUnreadCount as pickUnreadCountCore,
 } from "@/core/api/notifications";
+import { resolveCourseUniversityFields } from "@/core/api/courseUniversity";
 import type { StudentNotification } from "@/student/data/notifications";
 import { asArray, asRecord, pickId, pickNumber, pickString } from "@/core/api/utils";
 import type {
@@ -99,8 +100,9 @@ function mapContinueCourse(
   if (!id || !title) return null;
 
   const progress = pickNumber(course.progress, course.progressPercent, course.completion, course.percentage);
+  const { university, universityId } = resolveCourseUniversityFields(course);
 
-  return {
+  const mapped: StudentContinueCourse = {
     id,
     title,
     progress,
@@ -108,6 +110,9 @@ function mapContinueCourse(
     image: pickString(course.thumbnail, course.image, course.coverImage) || COURSE_IMAGES[index % COURSE_IMAGES.length],
     barColor: BAR_COLORS[index % BAR_COLORS.length],
   };
+  if (university) mapped.university = university;
+  if (universityId) mapped.universityId = universityId;
+  return mapped;
 }
 
 function extractCourses(source: Record<string, unknown>): Record<string, unknown>[] {
@@ -198,6 +203,10 @@ export function mapNotifications(raw: unknown): StudentNotification[] {
   return mapNotificationsCore(raw);
 }
 
-export function pickUnreadCount(raw: unknown, notifications: StudentNotification[]): number {
-  return pickUnreadCountCore(raw, notifications);
+export function pickUnreadCount(
+  envelopeOrRaw: unknown,
+  notifications: StudentNotification[],
+  payload?: unknown,
+): number {
+  return pickUnreadCountCore(envelopeOrRaw, payload ?? envelopeOrRaw, notifications);
 }

@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/shared/utils/cn";
 import type { CourseExam } from "@/core/api/exams";
 import { StudentIcon } from "../../dashboard/components/StudentIcon";
 
 interface QuizCardProps {
   quiz: CourseExam;
-  onSubmit?: (exam: CourseExam, writtenAnswer: string) => void | Promise<unknown>;
-  onViewResult?: (exam: CourseExam) => void | Promise<void>;
+  courseId: string;
   isLoading?: boolean;
 }
 
@@ -25,29 +24,10 @@ const MetaItem = ({
 
 export const QuizCard = ({
   quiz,
-  onSubmit,
-  onViewResult,
+  courseId,
   isLoading = false,
 }: QuizCardProps) => {
-  const [showSubmitForm, setShowSubmitForm] = useState(false);
-  const [writtenAnswer, setWrittenAnswer] = useState("");
-
-  const handleAction = async () => {
-    if (quiz.status === "completed") {
-      await onViewResult?.(quiz);
-      return;
-    }
-
-    if (quiz.status === "available" || quiz.status === "in-progress") {
-      setShowSubmitForm(true);
-    }
-  };
-
-  const handleSubmitExam = async () => {
-    await onSubmit?.(quiz, writtenAnswer.trim());
-    setShowSubmitForm(false);
-    setWrittenAnswer("");
-  };
+  const navigate = useNavigate();
 
   return (
     <article
@@ -126,46 +106,14 @@ export const QuizCard = ({
             </p>
           </div>
         )}
-
-        {showSubmitForm && quiz.status !== "completed" ? (
-          <div className="mt-3 space-y-3 rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
-            <p className="text-sm text-[#475569]">
-              {quiz.questions > 0
-                ? "أجب على الأسئلة أدناه ثم قدّم الاختبار."
-                : "اكتب إجابتك أو اختر خياراً للتقديم."}
-            </p>
-            <textarea
-              value={writtenAnswer}
-              onChange={(event) => setWrittenAnswer(event.target.value)}
-              rows={4}
-              placeholder="إجابتك..."
-              className="w-full resize-none rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#f5a524]"
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleSubmitExam}
-                disabled={isLoading}
-                className="flex-1 rounded-xl bg-[#f5a524] py-2 text-sm font-bold text-white disabled:opacity-60"
-              >
-                {isLoading ? "جاري التقديم..." : "تقديم الاختبار"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowSubmitForm(false)}
-                className="rounded-xl border border-[#e2e8f0] px-4 py-2 text-sm text-[#64748b]"
-              >
-                إلغاء
-              </button>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       <button
         type="button"
-        disabled={isLoading || showSubmitForm}
-        onClick={handleAction}
+        disabled={isLoading}
+        onClick={() =>
+          navigate(`/student/my-courses/${courseId}/quizzes/${quiz.id}`)
+        }
         className={cn(
           "flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60",
           quiz.actionClassName,

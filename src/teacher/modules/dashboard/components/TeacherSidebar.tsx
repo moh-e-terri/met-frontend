@@ -21,7 +21,7 @@ const mainLinks = [
     icon: "/images/student/icon-dashboard.svg",
   },
   {
-    label: "وسائل الدفع",
+    label: "الداشبورد المالي",
     to: "payments",
     icon: "/images/student/icon-payment.svg",
   },

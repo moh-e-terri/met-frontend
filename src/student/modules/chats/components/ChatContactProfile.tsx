@@ -8,7 +8,7 @@ interface ChatContactProfileProps {
 export const ChatContactProfile = ({ thread }: ChatContactProfileProps) => {
   return (
     <aside
-      className="hidden h-full min-h-[520px] flex-col overflow-y-auto p-5 xl:flex"
+      className="hidden h-full min-h-0 flex-col overflow-y-auto overscroll-contain p-5 xl:flex"
       dir="rtl"
     >
       <div className="text-center">

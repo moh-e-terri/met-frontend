@@ -1,6 +1,13 @@
 import { STUDENT_DEFAULT_AVATAR } from "@/student/constants/assets";
 import { apiClient, type ApiEnvelope } from "./client";
-import { asArray, asRecord, pickId, pickNumber, pickString } from "./utils";
+import {
+  asArray,
+  asRecord,
+  pickId,
+  pickNumber,
+  pickString,
+  resolveMediaUrl,
+} from "./utils";
 
 export interface ChatThread {
   id: string;
@@ -53,16 +60,21 @@ function formatMessageTime(value?: string): string {
 }
 
 function mapParticipant(raw: Record<string, unknown>) {
+  const first = pickString(raw.firstName);
+  const last = pickString(raw.familyName, raw.lastName);
+  const second = pickString(raw.secondName, raw.middleName);
+  const built = [first, second, last].filter(Boolean).join(" ");
+
   return {
     id: pickId(raw),
-    name: pickString(
-      raw.name,
-      raw.fullName,
-      pickString(raw.firstName) && pickString(raw.lastName)
-        ? `${pickString(raw.firstName)} ${pickString(raw.lastName)}`
-        : "",
-    ),
-    avatar: pickString(raw.avatar, raw.image) || STUDENT_DEFAULT_AVATAR,
+    name:
+      pickString(raw.name, raw.fullName) ||
+      built ||
+      pickString(raw.email) ||
+      "مستخدم",
+    avatar:
+      resolveMediaUrl(pickString(raw.avatar, raw.image, raw.profileImage)) ||
+      STUDENT_DEFAULT_AVATAR,
     role: pickString(raw.role, raw.title),
     university: pickString(asRecord(raw.university).name, raw.universityName),
     major: pickString(raw.major, raw.field),
@@ -71,44 +83,75 @@ function mapParticipant(raw: Record<string, unknown>) {
 
 export function mapConversations(raw: unknown, currentUserId?: string): ChatThread[] {
   const data = asRecord(raw);
-  const conversations = asArray<Record<string, unknown>>(
-    data.conversations ?? data.items ?? data.chats ?? (Array.isArray(raw) ? raw : []),
-  );
+  const listSource =
+    data.conversations ??
+    data.items ??
+    data.chats ??
+    data.conversation ??
+    (Array.isArray(raw) ? raw : []);
+  const conversations = asArray<Record<string, unknown>>(listSource);
 
   return conversations
     .map((item) => {
       const id = pickId(item) || pickString(item.conversationId);
       if (!id) return null;
 
-      const participants = asArray<Record<string, unknown>>(
+      const participants = asArray<Record<string, unknown> | string>(
         item.participants ?? item.users ?? item.members,
       );
-      const other =
-        participants.find((user) => pickId(user) && pickId(user) !== currentUserId) ??
-        participants[0];
-      const participant = mapParticipant(asRecord(other ?? item.participant ?? item.user));
+      const otherFromList =
+        participants.find((user) => {
+          if (typeof user === "string") {
+            return Boolean(user) && user !== currentUserId;
+          }
+          const pid = pickId(user);
+          return (
+            Boolean(pid) &&
+            pid !== currentUserId &&
+            typeof user === "object" &&
+            !Array.isArray(user) &&
+            Object.keys(user).length > 1
+          );
+        }) ??
+        participants.find((user) => {
+          if (typeof user === "string") return Boolean(user) && user !== currentUserId;
+          const pid = pickId(user);
+          return Boolean(pid) && pid !== currentUserId;
+        });
+
+      const otherUserRaw = item.otherUser ?? item.participant ?? item.user ?? otherFromList;
+      const otherUser =
+        typeof otherUserRaw === "string"
+          ? { _id: otherUserRaw, id: otherUserRaw }
+          : asRecord(otherUserRaw);
+      const participant = mapParticipant(otherUser);
+
+      // When API returns participants as bare ids, keep the other user's id.
+      const participantIdFromStrings =
+        typeof otherFromList === "string" ? otherFromList : undefined;
       const lastMessage = asRecord(item.lastMessage ?? item.latestMessage ?? item.message);
       const course = asRecord(item.course);
 
       return {
         id,
         name: participant.name || pickString(item.title, item.name) || "محادثة",
-        preview: pickString(
-          lastMessage.content,
-          lastMessage.text,
-          item.preview,
-          item.lastMessageText,
-        ) || "لا توجد رسائل بعد",
+        preview:
+          pickString(
+            lastMessage.content,
+            lastMessage.text,
+            item.preview,
+            item.lastMessageText,
+          ) || "لا توجد رسائل بعد",
         time: formatRelativeTime(
-          pickString(lastMessage.createdAt, item.updatedAt, item.lastMessageAt),
+          pickString(lastMessage.createdAt, item.updatedAt, item.lastMessageAt, item.createdAt),
         ),
         avatar: participant.avatar,
         unread: pickNumber(item.unreadCount, item.unread) || undefined,
-        online: Boolean(item.online ?? participant.id),
+        online: Boolean(item.online),
         role: participant.role,
         university: participant.university,
         major: participant.major,
-        participantId: participant.id || undefined,
+        participantId: participant.id || participantIdFromStrings || undefined,
         sharedCourses: pickString(course.title, course.name)
           ? [{ title: pickString(course.title, course.name), status: "active" as const }]
           : undefined,
@@ -175,12 +218,33 @@ export async function startConversation(
   currentUserId?: string,
 ): Promise<ChatThread | null> {
   const response = await apiClient.post<ApiEnvelope<unknown>>("/chat", payload);
-  const threads = mapConversations(response.data.data, currentUserId);
-  if (threads.length) return threads[0];
-
   const data = asRecord(response.data.data);
-  const mapped = mapConversations([data], currentUserId);
-  return mapped[0] ?? null;
+  const conversation = asRecord(data.conversation ?? data);
+
+  // Prefer mapping from list shape; fall back to synthesizing a thread
+  const fromList = mapConversations(
+    data.conversations ? data : { conversations: [conversation] },
+    currentUserId,
+  );
+  if (fromList[0]?.id) {
+    return {
+      ...fromList[0],
+      participantId: fromList[0].participantId || payload.targetUserId,
+    };
+  }
+
+  const id = pickId(conversation) || pickString(conversation.conversationId);
+  if (!id) return null;
+
+  return {
+    id,
+    name: "محادثة جديدة",
+    preview: "لا توجد رسائل بعد",
+    time: "الآن",
+    avatar: STUDENT_DEFAULT_AVATAR,
+    participantId: payload.targetUserId,
+    online: false,
+  };
 }
 
 export const chatQueryKeys = {

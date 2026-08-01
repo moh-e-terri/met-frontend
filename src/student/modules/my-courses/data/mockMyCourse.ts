@@ -57,6 +57,7 @@ export interface MyCourseData {
   quizzes: MyCourseQuiz[];
   assignments: MyCourseAssignment[];
   instructor: {
+    id?: string;
     name: string;
     role: string;
     bio: string;

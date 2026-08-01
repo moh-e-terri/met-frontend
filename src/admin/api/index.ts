@@ -1,14 +1,40 @@
 export { fetchAdminStats } from "./adminStats";
 export { fetchAdminUniversities, createAdminUniversity } from "./adminUniversities";
 export type { CreateUniversityPayload } from "./adminUniversities";
-export { fetchAdminInstructors, createAdminInstructor } from "./adminInstructors";
-export type { CreateInstructorPayload } from "./adminInstructors";
-export { fetchAdminCourses, createAdminCourse } from "./adminCourses";
-export type { CreateAdminCoursePayload } from "./adminCourses";
-export { fetchAdminStudents, addStudentMetPoints } from "./adminStudents";
-export type { AdminStudentsFilters, AddStudentMetPayload } from "./adminStudents";
-export { fetchAdminFinancePayments, fetchAdminFinancePaymentsRaw, releaseInstructorPayment } from "./adminFinance";
-export type { ReleaseInstructorPaymentPayload } from "./adminFinance";
+export { fetchAdminInstructors, fetchAdminInstructorById, createAdminInstructor, updateAdminInstructor } from "./adminInstructors";
+export type { CreateInstructorPayload, UpdateAdminInstructorPayload } from "./adminInstructors";
+export { fetchAdminCourses, createAdminCourse, updateAdminCourse, deleteAdminCourse } from "./adminCourses";
+export type { CreateAdminCoursePayload, UpdateAdminCoursePayload } from "./adminCourses";
+export {
+  fetchAdminStudents,
+  fetchAdminStudentById,
+  addStudentMetPoints,
+  updateAdminStudent,
+  updateAdminStudentAvatar,
+} from "./adminStudents";
+export type {
+  AdminStudentsFilters,
+  AddStudentMetPayload,
+  UpdateAdminStudentPayload,
+} from "./adminStudents";
+export { fetchAdminStudentProfileDetail } from "./adminStudentProfile";
+export {
+  fetchAdminFinancePayments,
+  fetchAdminFinancePaymentsRaw,
+  fetchAdminInstructorFinance,
+  locateAdminInstructorFinancePage,
+  matchesFinanceInstructor,
+  FINANCE_INSTRUCTORS_PAGE_SIZE,
+  releaseInstructorPayment,
+  cancelInstructorPayment,
+} from "./adminFinance";
+export type {
+  ReleaseInstructorPaymentPayload,
+  CancelInstructorPaymentPayload,
+  AdminInstructorFinanceRow,
+  AdminInstructorFinanceCourse,
+  FetchAdminInstructorFinanceParams,
+} from "./adminFinance";
 export {
   fetchAdminStatsRaw,
   mapRevenueDistribution,

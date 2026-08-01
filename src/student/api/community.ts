@@ -21,7 +21,10 @@ function toCommunityPostItem(post: CommunityPostView): CommunityPostItem {
   };
 }
 
-export async function fetchCommunityPosts(limit = 10): Promise<CommunityPostItem[]> {
-  const posts = await fetchCommunityPostsApi({ limit });
+export async function fetchCommunityPosts(
+  limit = 10,
+  currentUserId?: string,
+): Promise<CommunityPostItem[]> {
+  const posts = await fetchCommunityPostsApi({ limit, currentUserId });
   return posts.map(toCommunityPostItem);
 }
